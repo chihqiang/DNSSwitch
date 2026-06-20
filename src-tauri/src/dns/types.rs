@@ -2,6 +2,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DnsLeakResult {
+    pub expected_servers: Vec<String>,
+    pub actual_servers: Vec<String>,
+    pub leak_detected: bool,
+    pub is_reachable: bool,
+    pub latency_ms: Option<f64>,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DnsServer {
     pub id: String,
     pub name: String,
@@ -12,6 +23,10 @@ pub struct DnsServer {
     pub is_active: bool,
     pub is_system: bool,
     pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doh_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dot_address: Option<String>,
     pub created_at: u64,
     pub updated_at: u64,
 }

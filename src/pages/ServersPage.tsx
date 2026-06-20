@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { DnsSwitcher } from '@/components/DnsSwitcher'
 import { DnsServerList } from '@/components/DnsServerList'
 import { AddServerForm } from '@/components/AddServerForm'
 import { Modal, Button, ButtonVariant } from '@/components/common'
@@ -32,6 +31,8 @@ export function ServersPage() {
           name: server.name,
           addresses: server.addresses,
           tags: server.tags,
+          dohUrl: server.dohUrl,
+          dotAddress: server.dotAddress,
         })
       } else {
         addCustomServer(server)
@@ -49,7 +50,6 @@ export function ServersPage() {
 
   return (
     <>
-      <DnsSwitcher />
       <DnsServerList
         onEdit={handleEdit}
         onAdd={() => setShowAddServer(true)}

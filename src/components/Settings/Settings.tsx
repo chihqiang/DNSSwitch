@@ -1,8 +1,11 @@
+import { useState, useCallback } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { useTranslation } from 'react-i18next'
 import { useConfigStore } from '@/stores'
 import { ThemeMode } from '@/types'
 import { useSystemInfo } from '@/hooks'
 import { Card, Button, ButtonVariant } from '@/components/common'
+import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel'
 import {
   LATENCY_CHECK_INTERVAL_MIN_S,
   LATENCY_CHECK_INTERVAL_MAX_S,
@@ -23,6 +26,15 @@ const THEME_OPTIONS = [
   { value: ThemeMode.DARK, key: 'theme.dark' },
 ]
 
+const TABS = [
+  { key: 'general', labelKey: 'settings.general' },
+  { key: 'system', labelKey: 'settings.system_info' },
+  { key: 'history', labelKey: 'history.title' },
+  { key: 'tools', labelKey: 'settings.tools' },
+] as const
+
+type TabKey = typeof TABS[number]['key']
+
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
@@ -34,160 +46,233 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export function Settings({ onSave }: SettingsProps) {
   const { t, i18n } = useTranslation()
-  const { config, updateSettings, updateTheme, isSaving, error } = useConfigStore()
+  const [activeTab, setActiveTab] = useState<TabKey>('general')
+  const { config, updateSettings, updateTheme, isSaving, error, setConfig } = useConfigStore()
   const { systemInfo, networkServices } = useSystemInfo()
   const { settings } = config
+
+  const handleExport = useCallback(async () => {
+    const path = prompt(t('settings.export_path_hint') || 'Enter export path:')
+    if (!path) return
+    try {
+      await invoke('export_config', { filePath: path })
+      alert(t('settings.export_success'))
+    } catch (e) {
+      alert(`${t('settings.export_failed')}: ${e}`)
+    }
+  }, [t])
+
+  const handleImport = useCallback(async () => {
+    const path = prompt(t('settings.import_path_hint') || 'Enter import path:')
+    if (!path) return
+    try {
+      const cfg = await invoke('import_config', { filePath: path })
+      setConfig(cfg as any)
+      alert(t('settings.import_success'))
+    } catch (e) {
+      alert(`${t('settings.import_failed')}: ${e}`)
+    }
+  }, [t, setConfig])
 
   function handleLanguageChange(lng: string) {
     i18n.changeLanguage(lng)
   }
 
-  return (
-    <Card className="flex flex-col gap-4 p-3">
-      <h2 className="text-sm font-semibold">{t('settings.title')}</h2>
+  const tabHeader = (
+    <div className="flex gap-1 border-b border-border pb-2">
+      {TABS.map((tab) => (
+        <button
+          key={tab.key}
+          className={`px-3 py-1.5 text-sm rounded transition-colors duration-150 ${
+            activeTab === tab.key
+              ? 'bg-accent text-white font-medium'
+              : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+          }`}
+          onClick={() => setActiveTab(tab.key)}
+        >
+          {t(tab.labelKey)}
+        </button>
+      ))}
+    </div>
+  )
 
-      <div className="flex flex-col gap-4">
-        <section>
-          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.general')}</h3>
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-accent rounded"
-                checked={settings.autoStart}
-                onChange={(e) => updateSettings({ autoStart: e.target.checked })}
-              />
-              <span className="text-sm">{t('settings.auto_start')}</span>
-            </label>
+  const generalTab = (
+    <div className="flex flex-col gap-4">
+      <section>
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.general')}</h3>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-accent rounded"
+              checked={settings.autoStart}
+              onChange={(e) => updateSettings({ autoStart: e.target.checked })}
+            />
+            <span className="text-sm">{t('settings.auto_start')}</span>
+          </label>
 
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-accent rounded"
-                checked={settings.minimizeToTray}
-                onChange={(e) =>
-                  updateSettings({ minimizeToTray: e.target.checked })
-                }
-              />
-              <span className="text-sm">{t('settings.minimize_to_tray')}</span>
-            </label>
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-accent rounded"
+              checked={settings.minimizeToTray}
+              onChange={(e) =>
+                updateSettings({ minimizeToTray: e.target.checked })
+              }
+            />
+            <span className="text-sm">{t('settings.minimize_to_tray')}</span>
+          </label>
 
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-accent rounded"
-                checked={settings.notifyOnSwitch}
-                onChange={(e) =>
-                  updateSettings({ notifyOnSwitch: e.target.checked })
-                }
-              />
-              <span className="text-sm">{t('settings.notify_on_switch')}</span>
-            </label>
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-accent rounded"
+              checked={settings.notifyOnSwitch}
+              onChange={(e) =>
+                updateSettings({ notifyOnSwitch: e.target.checked })
+              }
+            />
+            <span className="text-sm">{t('settings.notify_on_switch')}</span>
+          </label>
 
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-accent rounded"
-                checked={settings.checkUpdates}
-                onChange={(e) =>
-                  updateSettings({ checkUpdates: e.target.checked })
-                }
-              />
-              <span className="text-sm">{t('settings.check_updates')}</span>
-            </label>
-          </div>
-        </section>
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-accent rounded"
+              checked={settings.checkUpdates}
+              onChange={(e) =>
+                updateSettings({ checkUpdates: e.target.checked })
+              }
+            />
+            <span className="text-sm">{t('settings.check_updates')}</span>
+          </label>
+        </div>
+      </section>
 
-        <section>
-          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.performance')}</h3>
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <span className="text-sm">{t('settings.latency_interval')}</span>
-              <input
-                type="number"
-                className="px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm w-20 text-center ml-auto"
-                value={Math.round(settings.latencyCheckInterval / 1000)}
-                min={LATENCY_CHECK_INTERVAL_MIN_S}
-                max={LATENCY_CHECK_INTERVAL_MAX_S}
-                onChange={(e) =>
-                  updateSettings({
-                    latencyCheckInterval: Number(e.target.value) * 1000,
-                  })
-                }
-              />
-              <span className="text-xs text-text-muted">s</span>
-            </label>
-          </div>
-        </section>
+      <section>
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.performance')}</h3>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <span className="text-sm">{t('settings.latency_interval')}</span>
+            <input
+              type="number"
+              className="px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm w-20 text-center ml-auto"
+              value={Math.round(settings.latencyCheckInterval / 1000)}
+              min={LATENCY_CHECK_INTERVAL_MIN_S}
+              max={LATENCY_CHECK_INTERVAL_MAX_S}
+              onChange={(e) =>
+                updateSettings({
+                  latencyCheckInterval: Number(e.target.value) * 1000,
+                })
+              }
+            />
+            <span className="text-xs text-text-muted">s</span>
+          </label>
+        </div>
+      </section>
 
-        <section>
-          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.appearance')}</h3>
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <span className="text-sm">{t('settings.language')}</span>
-              <select
-                className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
-                value={i18n.language.startsWith('zh') ? 'zh' : 'en'}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-              >
-                {LANGUAGES.map((lng) => (
-                  <option key={lng.value} value={lng.value}>{lng.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-              <span className="text-sm">{t('settings.theme_mode')}</span>
-              <select
-                className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
-                value={config.theme.mode}
-                onChange={(e) => updateTheme(e.target.value as typeof ThemeMode[keyof typeof ThemeMode])}
-              >
-                {THEME_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{t(opt.key)}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-
-        {systemInfo && (
-          <section>
-            <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.system_info')}</h3>
-            <div className="bg-bg-secondary rounded">
-              <InfoRow label={t('settings.os')} value={systemInfo.os} />
-              <InfoRow label={t('settings.os_version')} value={systemInfo.osVersion} />
-              <InfoRow label={t('settings.hostname')} value={systemInfo.hostname} />
-              <InfoRow label={t('settings.kernel')} value={systemInfo.kernelVersion} />
-            </div>
-          </section>
-        )}
-
-        {networkServices.length > 0 && (
-          <section>
-            <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.network_services')}</h3>
-            <div className="bg-bg-secondary rounded">
-              {networkServices.map((svc) => (
-                <div key={svc.name} className="flex items-center gap-2 px-3 py-1.5 border-b border-border last:border-b-0">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`} />
-                  <span className="text-xs text-text-primary">{svc.displayName}</span>
-                  {svc.dnsServers.length > 0 && (
-                    <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
-                  )}
-                </div>
+      <section>
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.appearance')}</h3>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <span className="text-sm">{t('settings.language')}</span>
+            <select
+              className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
+              value={i18n.language.startsWith('zh') ? 'zh' : 'en'}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+            >
+              {LANGUAGES.map((lng) => (
+                <option key={lng.value} value={lng.value}>{lng.label}</option>
               ))}
-            </div>
-          </section>
-        )}
-      </div>
+            </select>
+          </label>
+
+          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
+            <span className="text-sm">{t('settings.theme_mode')}</span>
+            <select
+              className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
+              value={config.theme.mode}
+              onChange={(e) => updateTheme(e.target.value as typeof ThemeMode[keyof typeof ThemeMode])}
+            >
+              {THEME_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{t(opt.key)}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </section>
 
       {error && <p className="text-xs text-danger">{error}</p>}
 
-      <div className="pt-3 border-t border-border">
+      <div className="flex items-center gap-2 pt-3 border-t border-border">
         <Button variant={ButtonVariant.PRIMARY} onClick={onSave} isLoading={isSaving}>
           {t('settings.save')}
         </Button>
       </div>
+    </div>
+  )
+
+  const systemTab = (
+    <div className="flex flex-col gap-4">
+      {systemInfo && (
+        <section>
+          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.system_info')}</h3>
+          <div className="bg-bg-secondary rounded">
+            <InfoRow label={t('settings.os')} value={systemInfo.os} />
+            <InfoRow label={t('settings.os_version')} value={systemInfo.osVersion} />
+            <InfoRow label={t('settings.hostname')} value={systemInfo.hostname} />
+            <InfoRow label={t('settings.kernel')} value={systemInfo.kernelVersion} />
+          </div>
+        </section>
+      )}
+
+      {networkServices.length > 0 && (
+        <section>
+          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.network_services')}</h3>
+          <div className="bg-bg-secondary rounded">
+            {networkServices.map((svc) => (
+              <div key={svc.name} className="flex items-center gap-2 px-3 py-1.5 border-b border-border last:border-b-0">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`} />
+                <span className="text-xs text-text-primary">{svc.displayName}</span>
+                {svc.dnsServers.length > 0 && (
+                  <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  )
+
+  const historyTab = <HistoryPanel />
+
+  const toolsTab = (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs text-text-muted">{t('settings.tools_desc')}</p>
+      <div className="flex items-center gap-2">
+        <Button variant={ButtonVariant.SECONDARY} onClick={handleExport}>
+          {t('settings.export')}
+        </Button>
+        <Button variant={ButtonVariant.SECONDARY} onClick={handleImport}>
+          {t('settings.import')}
+        </Button>
+      </div>
+    </div>
+  )
+
+  const tabContent: Record<TabKey, React.ReactNode> = {
+    general: generalTab,
+    system: systemTab,
+    history: historyTab,
+    tools: toolsTab,
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-3">
+      <h2 className="text-sm font-semibold">{t('settings.title')}</h2>
+      {tabHeader}
+      {tabContent[activeTab]}
     </Card>
   )
 }

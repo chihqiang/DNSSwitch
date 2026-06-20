@@ -4,6 +4,8 @@ export type {
   DnsStatus,
   DnsQueryResult,
   DnsLatencyTest,
+  DnsLeakResult,
+  DnsEvent,
 } from './dns'
 export {
   DnsProviderKey,
@@ -34,4 +36,8 @@ export type {
   SystemInfo,
   AppInfo,
 } from './system'
+
+export type {
+  RequestLogEntry,
+} from './requestLog'
 export { NetworkInterfaceType } from './system'

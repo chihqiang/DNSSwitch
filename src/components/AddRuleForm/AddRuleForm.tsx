@@ -50,6 +50,11 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
       ? editingRule.condition.interfaceName ?? ''
       : ''
   )
+  const [cronExpression, setCronExpression] = useState(
+    editingRule?.condition.type === ScheduleConditionType.CRON
+      ? editingRule.condition.expression
+      : '0 */1 * * *'
+  )
   const [targetServerId, setTargetServerId] = useState(
     editingRule?.action.targetServerId ?? (servers.length > 0 ? servers[0].id : '')
   )
@@ -93,6 +98,13 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         ssid: ssid.trim() || undefined,
         interfaceName: interfaceName.trim() || undefined,
       }
+    } else if (condType === ScheduleConditionType.CRON) {
+      condition = {
+        type: ScheduleConditionType.CRON,
+        expression: cronExpression.trim() || '0 */1 * * *',
+      }
+    } else if (condType === ScheduleConditionType.STARTUP) {
+      condition = { type: ScheduleConditionType.STARTUP }
     } else {
       condition = { type: ScheduleConditionType.ALWAYS }
     }
@@ -114,6 +126,8 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
     { value: ScheduleConditionType.ALWAYS, label: t('schedule.type_always') },
     { value: ScheduleConditionType.TIME, label: t('schedule.type_time') },
     { value: ScheduleConditionType.NETWORK, label: t('schedule.type_network') },
+    { value: ScheduleConditionType.CRON, label: 'Cron' },
+    { value: ScheduleConditionType.STARTUP, label: t('schedule.type_startup') },
   ]
 
   return (
@@ -210,6 +224,20 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
             />
           </div>
         </>
+      )}
+
+      {condType === ScheduleConditionType.CRON && (
+        <div className="flex flex-col gap-1">
+          <label className={LABEL_CLASS}>Cron Expression</label>
+          <input
+            className={inputClass()}
+            type="text"
+            value={cronExpression}
+            onChange={(e) => setCronExpression(e.target.value)}
+            placeholder="e.g. 0 */1 * * *"
+          />
+          <span className="text-xs text-text-muted">{t('schedule.cron_hint')}</span>
+        </div>
       )}
 
       <div className="flex flex-col gap-1">

@@ -5,7 +5,7 @@ import { getLatencyBadgeVariant } from '@/constants'
 
 export function StatusBar() {
   const { t } = useTranslation()
-  const { currentStatus } = useDnsStatus()
+  const { currentStatus, lastLeakResult } = useDnsStatus()
   const { servers } = useDnsServers()
 
   const activeServer = servers.find((s) => s.isActive)
@@ -31,6 +31,9 @@ export function StatusBar() {
         )}
         {currentStatus?.isCustom && (
           <Badge variant={BadgeVariant.INFO}>{t('status.custom_dns')}</Badge>
+        )}
+        {lastLeakResult?.leakDetected && (
+          <Badge variant={BadgeVariant.DANGER}>{t('status.leak_detected')}</Badge>
         )}
       </div>
     </div>

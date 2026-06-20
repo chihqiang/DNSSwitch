@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import i18n from '@/i18n'
 import { useDnsStore } from '@/stores'
 import { useDnsServers } from './useDnsServers'
-import type { DnsStatus, DnsLatencyTest } from '@/types'
+import type { DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types'
 
 export function useDnsStatus() {
   const {
@@ -11,10 +11,12 @@ export function useDnsStatus() {
     isTesting,
     isSwitching,
     error,
+    lastLeakResult,
     setCurrentStatus,
     setIsTesting,
     setIsSwitching,
     setError,
+    setLastLeakResult,
   } = useDnsStore()
   const { servers } = useDnsServers()
 
@@ -38,24 +40,31 @@ export function useDnsStatus() {
 
       setIsSwitching(true)
       setError(null)
+      setLastLeakResult(null)
       try {
         await invoke('switch_dns', {
           serverId: server.id,
+          serverName: server.name,
           addresses: server.addresses,
         })
         await fetchStatus()
+        const leak = await invoke<DnsLeakResult>('check_dns_leak', {
+          expectedAddresses: server.addresses,
+        })
+        setLastLeakResult(leak)
       } catch (e) {
         setError(String(e))
       } finally {
         setIsSwitching(false)
       }
     },
-    [servers, setIsSwitching, setError, fetchStatus]
+    [servers, setIsSwitching, setError, fetchStatus, setLastLeakResult]
   )
 
   const resetToSystem = useCallback(async () => {
     setIsSwitching(true)
     setError(null)
+    setLastLeakResult(null)
     try {
       await invoke('reset_system_dns')
       await fetchStatus()
@@ -107,6 +116,7 @@ export function useDnsStatus() {
     isTesting,
     isSwitching,
     error,
+    lastLeakResult,
     fetchStatus,
     switchDns,
     resetToSystem,

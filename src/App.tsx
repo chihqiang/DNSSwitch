@@ -2,8 +2,10 @@ import { Suspense, useEffect } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from '@/components/Layout/Layout'
 import { ServersPage } from '@/pages/ServersPage'
+import { QueryPage } from '@/pages/QueryPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { LogPage } from '@/pages/LogPage'
 import { StatusBar } from '@/components/StatusBar'
 import { useConfig } from '@/hooks'
 
@@ -19,7 +21,9 @@ function AppContent() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/servers" element={<ServersPage />} />
+          <Route path="/query" element={<QueryPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/log" element={<LogPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/servers" replace />} />
         </Route>

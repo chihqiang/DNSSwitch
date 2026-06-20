@@ -53,6 +53,8 @@ export function DnsServerCard({
           {server.tags.map((tag) => (
             <Badge key={tag} variant={BadgeVariant.INFO}>{t('tag.' + tag)}</Badge>
           ))}
+          {server.dohUrl && <Badge variant={BadgeVariant.INFO}>DoH</Badge>}
+          {server.dotAddress && <Badge variant={BadgeVariant.INFO}>DoT</Badge>}
         </div>
       </div>
 

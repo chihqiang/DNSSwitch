@@ -8,7 +8,9 @@ export function Layout() {
 
   const tabs = [
     { path: '/servers', label: t('tab.servers') },
+    { path: '/query', label: t('tab.query') },
     { path: '/schedule', label: t('tab.schedule') },
+    { path: '/log', label: t('tab.log') },
     { path: '/settings', label: t('tab.settings') },
   ]
 

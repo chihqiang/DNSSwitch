@@ -1,17 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { useTranslation } from 'react-i18next'
-import type { DnsServer } from '@/types'
-import { DnsProviderKey, DnsProviderInfo, DnsServerTag } from '@/types'
+import type { DnsServer, DnsLatencyTest } from '@/types'
+import { DnsProviderKey, DnsProviderInfo } from '@/types'
 import { Button, ButtonVariant } from '@/components/common'
 import { inputClass, LABEL_CLASS, ERROR_CLASS } from '@/components/common/forms'
-
-const TAG_OPTIONS = [
-  DnsServerTag.PUBLIC,
-  DnsServerTag.PRIVACY,
-  DnsServerTag.FAST,
-  DnsServerTag.SECURITY,
-  DnsServerTag.FAMILY,
-]
 
 function isValidIp(ip: string): boolean {
   const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/
@@ -38,28 +31,30 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
   const [name, setName] = useState(editingServer?.name ?? '')
   const [primaryAddr, setPrimaryAddr] = useState(editingServer?.addresses[0] ?? '')
   const [secondaryAddr, setSecondaryAddr] = useState(editingServer?.addresses[1] ?? '')
-  const [selectedTags, setSelectedTags] = useState<DnsServerTag[]>(editingServer?.tags ?? [])
+  const [dohUrl, setDohUrl] = useState(editingServer?.dohUrl ?? '')
+  const [dotAddress, setDotAddress] = useState(editingServer?.dotAddress ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
-
-  function toggleTag(tag: DnsServerTag) {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    )
-  }
+  const [testResult, setTestResult] = useState<DnsLatencyTest | null>(null)
+  const [isTesting, setIsTesting] = useState(false)
 
   function reset() {
     setName('')
     setPrimaryAddr('')
     setSecondaryAddr('')
-    setSelectedTags([])
     setErrors({})
   }
+
+  const hasAddr = primaryAddr.trim().length > 0
+  const hasDoh = dohUrl.trim().length > 0
+  const hasDot = dotAddress.trim().length > 0
 
   function validate(): boolean {
     const errs: Record<string, string> = {}
     if (!name.trim()) errs.name = t('server.name_required')
-    if (!primaryAddr.trim()) errs.address = t('server.address_required')
-    else if (!isValidIp(primaryAddr.trim())) errs.address = t('server.address_invalid')
+    if (!hasAddr && !hasDoh && !hasDot) {
+      errs.address = t('server.address_or_doh_required')
+    }
+    if (hasAddr && !isValidIp(primaryAddr.trim())) errs.address = t('server.address_invalid')
     if (secondaryAddr.trim() && !isValidIp(secondaryAddr.trim())) {
       errs.secondaryAddress = t('server.address_invalid')
     }
@@ -67,11 +62,30 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     return Object.keys(errs).length === 0
   }
 
+  const handleTest = useCallback(async () => {
+    const addr = primaryAddr.trim()
+    if (!addr || !isValidIp(addr)) return
+    setIsTesting(true)
+    setTestResult(null)
+    try {
+      const result = await invoke<DnsLatencyTest>('test_dns_latency', {
+        serverId: 'test',
+        address: addr,
+      })
+      setTestResult(result)
+    } catch {
+      setTestResult({ serverId: 'test', address: addr, latencyMs: 0, success: false, error: 'Test failed' })
+    } finally {
+      setIsTesting(false)
+    }
+  }, [primaryAddr])
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
 
-    const addresses = [primaryAddr.trim()]
+    const addresses: string[] = []
+    if (primaryAddr.trim()) addresses.push(primaryAddr.trim())
     if (secondaryAddr.trim()) addresses.push(secondaryAddr.trim())
 
     const now = Date.now()
@@ -82,7 +96,9 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
       provider: editingServer?.provider ?? DnsProviderInfo[DnsProviderKey.CUSTOM],
       isActive: editingServer?.isActive ?? false,
       isSystem: editingServer?.isSystem ?? false,
-      tags: selectedTags,
+      tags: [],
+      dohUrl: dohUrl.trim() || undefined,
+      dotAddress: dotAddress.trim() || undefined,
       createdAt: editingServer?.createdAt ?? now,
       updatedAt: now,
       latency: editingServer?.latency,
@@ -132,25 +148,43 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className={LABEL_CLASS}>{t('server.tags')}</label>
-        <div className="flex flex-wrap gap-2">
-          {TAG_OPTIONS.map((tag) => (
-            <label key={tag} className="flex items-center gap-1.5 text-xs cursor-pointer text-text-primary px-2 py-1 rounded bg-bg-secondary hover:bg-border transition-colors duration-150">
-              <input
-                type="checkbox"
-                className="accent-accent"
-                checked={selectedTags.includes(tag)}
-                onChange={() => toggleTag(tag)}
-              />
-              <span>{t(`tag.${tag}`)}</span>
-            </label>
-          ))}
-        </div>
+        <label className={LABEL_CLASS}>DoH URL</label>
+        <input
+          className={inputClass()}
+          type="text"
+          value={dohUrl}
+          onChange={(e) => setDohUrl(e.target.value)}
+          placeholder="https://dns.example.com/dns-query"
+        />
+        <span className="text-xs text-text-muted">{t('server.doh_hint')}</span>
       </div>
+
+      <div className="flex flex-col gap-1">
+        <label className={LABEL_CLASS}>DoT Address</label>
+        <input
+          className={inputClass()}
+          type="text"
+          value={dotAddress}
+          onChange={(e) => setDotAddress(e.target.value)}
+          placeholder="1.1.1.1"
+        />
+        <span className="text-xs text-text-muted">{t('server.dot_hint')}</span>
+      </div>
+
+      {testResult && (
+        <div className={`px-3 py-2 rounded text-xs ${testResult.success ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
+          {testResult.success
+            ? `Reachable - ${Math.round(testResult.latencyMs)}ms`
+            : testResult.error || 'Unreachable'}
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onCancel}>
           {t('common.cancel')}
+        </Button>
+        <Button type="button" variant={ButtonVariant.GHOST} size="sm" onClick={handleTest} isLoading={isTesting} disabled={!primaryAddr.trim() || !isValidIp(primaryAddr.trim())}>
+          Test
         </Button>
         <Button type="submit" variant={ButtonVariant.PRIMARY}>
           {isEditing ? t('common.save') : t('common.add')}

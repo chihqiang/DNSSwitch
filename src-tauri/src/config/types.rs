@@ -47,6 +47,10 @@ pub enum ScheduleCondition {
         ssid: Option<String>,
         interface_name: Option<String>,
     },
+    Cron {
+        expression: String,
+    },
+    Startup,
     Always,
 }
 

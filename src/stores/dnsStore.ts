@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import type { DnsServer, DnsStatus, DnsLatencyTest } from '@/types'
+import type { DnsServer, DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types'
 import { MAX_LATENCY_HISTORY } from '@/constants'
 
 interface DnsState {
   currentStatus: DnsStatus | null
   servers: DnsServer[]
   latencyTests: DnsLatencyTest[]
+  lastLeakResult: DnsLeakResult | null
   isTesting: boolean
   isSwitching: boolean
   error: string | null
@@ -18,6 +19,7 @@ interface DnsState {
   setActiveServer: (id: string) => void
   setLatencyTests: (tests: DnsLatencyTest[]) => void
   addLatencyTest: (test: DnsLatencyTest) => void
+  setLastLeakResult: (result: DnsLeakResult | null) => void
   setIsTesting: (v: boolean) => void
   setIsSwitching: (v: boolean) => void
   setError: (error: string | null) => void
@@ -27,6 +29,7 @@ export const useDnsStore = create<DnsState>((set) => ({
   currentStatus: null,
   servers: [],
   latencyTests: [],
+  lastLeakResult: null,
   isTesting: false,
   isSwitching: false,
   error: null,
@@ -63,6 +66,8 @@ export const useDnsStore = create<DnsState>((set) => ({
     set((state) => ({
       latencyTests: [test, ...state.latencyTests].slice(0, MAX_LATENCY_HISTORY),
     })),
+
+  setLastLeakResult: (result) => set({ lastLeakResult: result }),
 
   setIsTesting: (v) => set({ isTesting: v }),
   setIsSwitching: (v) => set({ isSwitching: v }),

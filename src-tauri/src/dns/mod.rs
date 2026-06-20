@@ -1,4 +1,8 @@
 pub mod types;
 pub mod resolver;
+pub mod query;
+pub mod history;
 pub mod system_dns;
 pub mod monitor;
+pub mod doh;
+pub mod dot;

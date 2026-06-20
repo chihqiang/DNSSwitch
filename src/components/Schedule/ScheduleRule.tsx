@@ -18,19 +18,30 @@ export function ScheduleRule({
 }: ScheduleRuleProps) {
   const { t } = useTranslation()
 
-  const conditionLabel =
-    rule.condition.type === CondType.TIME
-      ? t('schedule.condition_time', { start: rule.condition.timeRange.start, end: rule.condition.timeRange.end })
-      : rule.condition.type === CondType.NETWORK
-        ? t('schedule.condition_network', { name: rule.condition.ssid || rule.condition.interfaceName || t('common.unknown') })
-        : t('schedule.condition_always')
+  const conditionLabel = () => {
+    switch (rule.condition.type) {
+      case CondType.TIME:
+        return t('schedule.condition_time', { start: rule.condition.timeRange.start, end: rule.condition.timeRange.end })
+      case CondType.NETWORK:
+        return t('schedule.condition_network', { name: rule.condition.ssid || rule.condition.interfaceName || t('common.unknown') })
+      case CondType.CRON:
+        return `Cron: ${rule.condition.expression}`
+      case CondType.STARTUP:
+        return t('schedule.condition_startup')
+      default:
+        return t('schedule.condition_always')
+    }
+  }
 
-  const typeLabel =
-    rule.condition.type === CondType.TIME
-      ? t('schedule.type_time')
-      : rule.condition.type === CondType.NETWORK
-        ? t('schedule.type_network')
-        : t('schedule.type_always')
+  const typeLabel = () => {
+    switch (rule.condition.type) {
+      case CondType.TIME: return t('schedule.type_time')
+      case CondType.NETWORK: return t('schedule.type_network')
+      case CondType.CRON: return 'Cron'
+      case CondType.STARTUP: return t('schedule.type_startup')
+      default: return t('schedule.type_always')
+    }
+  }
 
   return (
     <Card className={`flex flex-col gap-3 p-3 ${!rule.enabled ? 'opacity-60' : ''}`}>
@@ -38,7 +49,7 @@ export function ScheduleRule({
         <div className="flex items-center gap-2">
           <h4 className="text-sm font-semibold">{rule.name}</h4>
           <span className="inline-flex">
-            <Badge variant={BadgeVariant.INFO}>{typeLabel}</Badge>
+            <Badge variant={BadgeVariant.INFO}>{typeLabel()}</Badge>
           </span>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">
@@ -55,7 +66,7 @@ export function ScheduleRule({
       </div>
 
       <div className="text-sm text-text-secondary">
-        <p className="m-0">{conditionLabel}</p>
+        <p className="m-0">{conditionLabel()}</p>
         {rule.description && (
           <p className="mt-1 text-xs text-text-muted">{rule.description}</p>
         )}

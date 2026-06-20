@@ -11,6 +11,8 @@ export type ThemeMode = (typeof ThemeMode)[keyof typeof ThemeMode]
 export const ScheduleConditionType = {
   TIME: 'time',
   NETWORK: 'network',
+  CRON: 'cron',
+  STARTUP: 'startup',
   ALWAYS: 'always',
 } as const
 export type ScheduleConditionType = (typeof ScheduleConditionType)[keyof typeof ScheduleConditionType]
@@ -41,6 +43,8 @@ export interface ScheduleRule {
 export type ScheduleCondition =
   | { type: typeof ScheduleConditionType.TIME; timeRange: TimeRange; daysOfWeek: number[] }
   | { type: typeof ScheduleConditionType.NETWORK; ssid?: string; interfaceName?: string }
+  | { type: typeof ScheduleConditionType.CRON; expression: string }
+  | { type: typeof ScheduleConditionType.STARTUP }
   | { type: typeof ScheduleConditionType.ALWAYS }
 
 export interface TimeRange {
