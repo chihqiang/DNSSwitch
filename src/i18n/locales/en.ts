@@ -20,6 +20,7 @@ export default {
     close: 'Close',
     confirm_delete: 'Are you sure you want to delete "{{name}}"?',
     confirm: 'Confirm',
+    custom: 'Custom',
   },
   status: {
     healthy: 'Healthy',
@@ -62,6 +63,8 @@ export default {
     empty_desc: 'Add a custom DNS server or use the preset list above.',
     no_ip_hint: 'No IP configured, cannot switch system DNS',
     no_ip_form_hint: 'System DNS switching requires IP addresses. DoH/DoT are for queries only. Servers without IPs cannot be set as system DNS.',
+    doh_hint: 'Optional DNS-over-HTTPS endpoint URL',
+    dot_hint: 'Optional DNS-over-TLS server address (port 853)',
   },
   dns_provider: {
     system: 'System Default',

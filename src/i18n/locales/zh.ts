@@ -20,6 +20,7 @@ export default {
     close: '关闭',
     confirm_delete: '确认删除"{{name}}"？',
     confirm: '确认',
+    custom: '自定义',
   },
   status: {
     healthy: '正常',
@@ -62,6 +63,8 @@ export default {
     empty_desc: '添加自定义 DNS 服务器，或使用上方预设列表。',
     no_ip_hint: '未配置 IP 地址，无法切换系统 DNS',
     no_ip_form_hint: '系统 DNS 切换需要 IP 地址，DoH/DoT 只能用于查询。不带 IP 的服务器无法切换。',
+    doh_hint: '可选 DNS-over-HTTPS 端点 URL',
+    dot_hint: '可选 DNS-over-TLS 服务器地址 (端口 853)',
   },
   dns_provider: {
     system: '系统默认',

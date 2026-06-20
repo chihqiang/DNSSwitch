@@ -6,7 +6,7 @@
 
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use native_tls::TlsConnector;
 
@@ -101,6 +101,7 @@ pub fn resolve_via_dot(
         answers,
         server: format!("{}:{}", dot_address, DOT_DEFAULT_PORT),
         latency_ms,
+        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64,
     })
 }
 

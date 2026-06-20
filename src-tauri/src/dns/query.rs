@@ -31,6 +31,7 @@ pub struct DnsQueryResult {
     pub answers: Vec<String>,
     pub server: String,
     pub latency_ms: f64,
+    pub timestamp: u64,
 }
 
 /// DNS 记录类型枚举
@@ -192,6 +193,7 @@ pub fn resolve(domain: &str, record_type_str: &str, dns_server: &str) -> Result<
         answers,
         server: dns_server.to_string(),
         latency_ms,
+        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64,
     })
 }
 

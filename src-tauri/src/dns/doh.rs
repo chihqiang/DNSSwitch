@@ -4,7 +4,7 @@
 // RFC 8484 定义：Content-Type 为 application/dns-message
 // ============================================================
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use reqwest::Client;
 
@@ -68,6 +68,7 @@ pub async fn resolve_via_doh(
         answers,
         server: doh_url.to_string(),
         latency_ms,
+        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64,
     })
 }
 

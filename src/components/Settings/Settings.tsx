@@ -196,11 +196,10 @@ export function Settings({ onSave }: SettingsProps) {
               value={Math.round(settings.latencyCheckInterval / 1000)}
               min={LATENCY_CHECK_INTERVAL_MIN_S}
               max={LATENCY_CHECK_INTERVAL_MAX_S}
-              onChange={(e) =>
-                useConfigStore.getState().updateSettings({
-                  latencyCheckInterval: Number(e.target.value) * 1000,
-                })
-              }
+              onChange={(e) => {
+                const val = Math.max(LATENCY_CHECK_INTERVAL_MIN_S, Math.min(LATENCY_CHECK_INTERVAL_MAX_S, Number(e.target.value) || LATENCY_CHECK_INTERVAL_MIN_S));
+                useConfigStore.getState().updateSettings({ latencyCheckInterval: val * 1000 });
+              }}
             />
             <span className="text-xs text-text-muted">s</span>
           </label>

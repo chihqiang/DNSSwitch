@@ -271,8 +271,9 @@ fn build_tray_menu(
             } else {
                 server.name.clone()
             };
+            let id = format!("switch_{}", server.id);
             let item =
-                MenuItemBuilder::with_id(&format!("switch_{}", server.id), &label).build(app)?;
+                MenuItemBuilder::with_id(&id, &label).build(app)?;
             server_items.push(item);
         }
     }
@@ -280,16 +281,13 @@ fn build_tray_menu(
         server_items.iter().map(|i| i as &dyn IsMenuItem<tauri::Wry>).collect();
 
     // 组装菜单项顺序
-    let mut items: Vec<&dyn IsMenuItem<tauri::Wry>> = Vec::new();
-    items.push(&show);
-    items.push(&sep1);
-    items.push(&dns_status);
-    items.push(&sep2);
-    items.extend(server_refs);
-    items.push(&sep3);
-    items.push(&reset);
-    items.push(&sep4);
-    items.push(&quit);
+    let items: Vec<&dyn IsMenuItem<tauri::Wry>> = vec![
+        &show,
+        &sep1,
+        &dns_status,
+        &sep2,
+    ];
+    let items = [items, server_refs, vec![&sep3, &reset, &sep4, &quit]].concat();
 
     let menu = Menu::with_items(app, &items)?;
     Ok(menu)

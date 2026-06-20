@@ -12,10 +12,8 @@ export type {
 } from './config';
 export { ThemeMode, DEFAULT_CONFIG } from './config';
 
-export type { NetworkInterface, NetworkService, SystemInfo, AppInfo } from './system';
+export type { NetworkService, SystemInfo } from './system';
 
 export type { RequestLogEntry } from './requestLog';
 
 export type { DnsHealthEvent, DnsLatencyUpdate, ServerLatency } from './health';
-
-export { NetworkInterfaceType } from './system';

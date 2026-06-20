@@ -17,10 +17,14 @@ use types::{AppConfig, DATA_DIR};
 /// 内存缓存，避免 monitor 线程频繁读磁盘
 static CACHED_CONFIG: RwLock<Option<AppConfig>> = RwLock::new(None);
 
-/// 获取应用数据目录路径：~/.dnsswitch
+/// 获取应用数据目录路径：
+/// macOS/Linux: ~/.dnsswitch
+/// Windows: %USERPROFILE%\.dnsswitch
+/// 回退到当前工作目录
 pub fn data_dir() -> Result<PathBuf, AppError> {
     let home = std::env::var("HOME")
-        .map_err(|_| AppError::new("Cannot determine home directory"))?;
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
     Ok(PathBuf::from(home).join(DATA_DIR))
 }
 
