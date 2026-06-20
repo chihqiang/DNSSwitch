@@ -1,112 +1,112 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import type { ScheduleRule } from '@/types'
-import { ScheduleConditionType } from '@/types'
-import { Button, ButtonVariant } from '@/components/common'
-import { useDnsStore } from '@/stores'
-import { inputClass, INPUT_CLASS, INPUT_CLASS_DEFAULT, INPUT_FOCUS, LABEL_CLASS, ERROR_CLASS } from '@/components/common/forms'
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ScheduleRule } from '@/types';
+import { ScheduleConditionType } from '@/types';
+import { Button, ButtonVariant } from '@/components/common';
+import { useDnsStore } from '@/stores';
+import {
+  inputClass,
+  INPUT_CLASS,
+  INPUT_CLASS_DEFAULT,
+  INPUT_FOCUS,
+  LABEL_CLASS,
+  ERROR_CLASS,
+} from '@/components/common/forms';
 
-const DAYS = [0, 1, 2, 3, 4, 5, 6]
-const DAY_KEYS = ['schedule.day_sun', 'schedule.day_mon', 'schedule.day_tue',
-  'schedule.day_wed', 'schedule.day_thu', 'schedule.day_fri', 'schedule.day_sat']
+const DAYS = [0, 1, 2, 3, 4, 5, 6];
+const DAY_KEYS = [
+  'schedule.day_sun',
+  'schedule.day_mon',
+  'schedule.day_tue',
+  'schedule.day_wed',
+  'schedule.day_thu',
+  'schedule.day_fri',
+  'schedule.day_sat',
+];
 
-const SELECT_CLASS = `${INPUT_CLASS_DEFAULT} bg-bg-card text-text-primary text-sm px-3 py-2 border rounded outline-none cursor-pointer`
+const SELECT_CLASS = `${INPUT_CLASS_DEFAULT} bg-bg-card text-text-primary text-sm px-3 py-2 border rounded outline-none cursor-pointer`;
 
 interface AddRuleFormProps {
-  editingRule?: ScheduleRule | null
-  onSubmit: (rule: ScheduleRule) => void
-  onCancel: () => void
+  editingRule?: ScheduleRule | null;
+  onSubmit: (rule: ScheduleRule) => void;
+  onCancel: () => void;
 }
 
 export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProps) {
-  const { t } = useTranslation()
-  const servers = useDnsStore((s) => s.servers)
-  const isEditing = !!editingRule
+  const { t } = useTranslation();
+  const servers = useDnsStore((s) => s.servers);
+  const isEditing = !!editingRule;
 
-  const [name, setName] = useState(editingRule?.name ?? '')
-  const [condType, setCondType] = useState(editingRule?.condition.type ?? ScheduleConditionType.ALWAYS)
+  const [name, setName] = useState(editingRule?.name ?? '');
+  const [condType, setCondType] = useState(editingRule?.condition.type ?? ScheduleConditionType.ALWAYS);
   const [startTime, setStartTime] = useState(
-    editingRule?.condition.type === ScheduleConditionType.TIME
-      ? editingRule.condition.timeRange.start
-      : '09:00'
-  )
+    editingRule?.condition.type === ScheduleConditionType.TIME ? editingRule.condition.timeRange.start : '09:00',
+  );
   const [endTime, setEndTime] = useState(
-    editingRule?.condition.type === ScheduleConditionType.TIME
-      ? editingRule.condition.timeRange.end
-      : '18:00'
-  )
+    editingRule?.condition.type === ScheduleConditionType.TIME ? editingRule.condition.timeRange.end : '18:00',
+  );
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
-    editingRule?.condition.type === ScheduleConditionType.TIME
-      ? editingRule.condition.daysOfWeek
-      : [1, 2, 3, 4, 5]
-  )
+    editingRule?.condition.type === ScheduleConditionType.TIME ? editingRule.condition.daysOfWeek : [1, 2, 3, 4, 5],
+  );
   const [ssid, setSsid] = useState(
-    editingRule?.condition.type === ScheduleConditionType.NETWORK
-      ? editingRule.condition.ssid ?? ''
-      : ''
-  )
+    editingRule?.condition.type === ScheduleConditionType.NETWORK ? (editingRule.condition.ssid ?? '') : '',
+  );
   const [interfaceName, setInterfaceName] = useState(
-    editingRule?.condition.type === ScheduleConditionType.NETWORK
-      ? editingRule.condition.interfaceName ?? ''
-      : ''
-  )
+    editingRule?.condition.type === ScheduleConditionType.NETWORK ? (editingRule.condition.interfaceName ?? '') : '',
+  );
   const [cronExpression, setCronExpression] = useState(
-    editingRule?.condition.type === ScheduleConditionType.CRON
-      ? editingRule.condition.expression
-      : '0 */1 * * *'
-  )
+    editingRule?.condition.type === ScheduleConditionType.CRON ? editingRule.condition.expression : '0 */1 * * *',
+  );
   const [targetServerId, setTargetServerId] = useState(
-    editingRule?.action.targetServerId ?? (servers.length > 0 ? servers[0].id : '')
-  )
-  const [priority, setPriority] = useState(editingRule?.priority ?? 0)
-  const [description, setDescription] = useState(editingRule?.description ?? '')
-  const [errors, setErrors] = useState<Record<string, string>>({})
+    editingRule?.action.targetServerId ?? (servers.length > 0 ? servers[0].id : ''),
+  );
+  const [priority, setPriority] = useState(editingRule?.priority ?? 0);
+  const [description, setDescription] = useState(editingRule?.description ?? '');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   function toggleDay(day: number) {
-    setDaysOfWeek((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    )
+    setDaysOfWeek((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
 
   function validate(): boolean {
-    const errs: Record<string, string> = {}
-    if (!name.trim()) errs.name = t('schedule.name_required')
-    if (!targetServerId) errs.server = t('schedule.server_required')
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = t('schedule.name_required');
+    if (!targetServerId) errs.server = t('schedule.server_required');
     if (condType === ScheduleConditionType.TIME) {
-      if (!startTime || !endTime) errs.time = t('schedule.time_required')
+      if (!startTime || !endTime) errs.time = t('schedule.time_required');
     }
-    setErrors(errs)
-    return Object.keys(errs).length === 0
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   }
 
   function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
+    e.preventDefault();
+    if (!validate()) return;
 
-    const now = Date.now()
-    let condition: ScheduleRule['condition']
+    const now = Date.now();
+    let condition: ScheduleRule['condition'];
 
     if (condType === ScheduleConditionType.TIME) {
       condition = {
         type: ScheduleConditionType.TIME,
         timeRange: { start: startTime, end: endTime },
         daysOfWeek,
-      }
+      };
     } else if (condType === ScheduleConditionType.NETWORK) {
       condition = {
         type: ScheduleConditionType.NETWORK,
         ssid: ssid.trim() || undefined,
         interfaceName: interfaceName.trim() || undefined,
-      }
+      };
     } else if (condType === ScheduleConditionType.CRON) {
       condition = {
         type: ScheduleConditionType.CRON,
         expression: cronExpression.trim() || '0 */1 * * *',
-      }
+      };
     } else if (condType === ScheduleConditionType.STARTUP) {
-      condition = { type: ScheduleConditionType.STARTUP }
+      condition = { type: ScheduleConditionType.STARTUP };
     } else {
-      condition = { type: ScheduleConditionType.ALWAYS }
+      condition = { type: ScheduleConditionType.ALWAYS };
     }
 
     const rule: ScheduleRule = {
@@ -117,9 +117,9 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
       action: { targetServerId },
       priority,
       description: description.trim() || undefined,
-    }
+    };
 
-    onSubmit(rule)
+    onSubmit(rule);
   }
 
   const conditionOptions = [
@@ -128,7 +128,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
     { value: ScheduleConditionType.NETWORK, label: t('schedule.type_network') },
     { value: ScheduleConditionType.CRON, label: 'Cron' },
     { value: ScheduleConditionType.STARTUP, label: t('schedule.type_startup') },
-  ]
+  ];
 
   return (
     <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
@@ -150,10 +150,14 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         <select
           className={`${SELECT_CLASS} ${INPUT_FOCUS}`}
           value={condType}
-          onChange={(e) => setCondType(e.target.value as typeof ScheduleConditionType[keyof typeof ScheduleConditionType])}
+          onChange={(e) =>
+            setCondType(e.target.value as (typeof ScheduleConditionType)[keyof typeof ScheduleConditionType])
+          }
         >
           {conditionOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       </div>
@@ -186,7 +190,10 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
             <label className={LABEL_CLASS}>{t('schedule.days_of_week')}</label>
             <div className="flex flex-wrap gap-1.5">
               {DAYS.map((day) => (
-                <label key={day} className="flex items-center gap-1 text-xs cursor-pointer text-text-primary px-2 py-1 rounded bg-bg-secondary hover:bg-border transition-colors duration-150">
+                <label
+                  key={day}
+                  className="flex items-center gap-1 text-xs cursor-pointer text-text-primary px-2 py-1 rounded bg-bg-secondary hover:bg-border transition-colors duration-150"
+                >
                   <input
                     type="checkbox"
                     className="accent-accent"
@@ -251,7 +258,9 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
             onChange={(e) => setTargetServerId(e.target.value)}
           >
             {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
         )}
@@ -290,5 +299,5 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         </Button>
       </div>
     </form>
-  )
+  );
 }

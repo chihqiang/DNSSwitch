@@ -1,60 +1,60 @@
-import { useTranslation } from 'react-i18next'
-import { Card, Badge, BadgeVariant, Button, ButtonVariant, ErrorBoundary } from '@/components/common'
-import { useRequestLogStore } from '@/stores'
+import { useTranslation } from 'react-i18next';
+import { Card, Badge, BadgeVariant, Button, ButtonVariant, ErrorBoundary } from '@/components/common';
+import { useRequestLogStore } from '@/stores';
 
 export function LogPage() {
-  const { t } = useTranslation()
-  const { entries, clearEntries } = useRequestLogStore()
+  const { t } = useTranslation();
+  const { entries, clearEntries } = useRequestLogStore();
 
   return (
     <ErrorBoundary>
       <Card className="flex flex-col gap-3 p-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">{t('log.title')}</h2>
-        {entries.length > 0 && (
-          <Button variant={ButtonVariant.GHOST} size="sm" onClick={clearEntries}>
-            {t('log.clear')}
-          </Button>
-        )}
-      </div>
-
-      {entries.length === 0 && (
-        <p className="text-sm text-text-muted text-center py-8">{t('log.empty')}</p>
-      )}
-
-      {entries.length > 0 && (
-        <div className="flex flex-col gap-1 max-h-[600px] overflow-y-auto">
-          {entries.map((entry) => (
-            <div key={entry.id} className="flex flex-col gap-1 px-2.5 py-2 bg-bg-secondary rounded text-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant={entry.success ? BadgeVariant.SUCCESS : BadgeVariant.DANGER}>
-                    {entry.success ? 'OK' : 'FAIL'}
-                  </Badge>
-                  <span className="font-medium">{entry.domain}</span>
-                  <span className="text-text-muted">{entry.recordType}</span>
-                </div>
-                <span className="text-text-muted">
-                  {new Date(entry.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-text-muted">
-                <span>{entry.protocol.toUpperCase()} → {entry.server}</span>
-                <span>{Math.round(entry.latencyMs)}ms</span>
-              </div>
-              {entry.detail && <span className="text-danger">{entry.detail}</span>}
-              {entry.answers.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-0.5">
-                  {entry.answers.map((ans: string, i: number) => (
-                    <code key={i} className="text-xs bg-bg-card px-1.5 py-0.5 rounded">{ans}</code>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">{t('log.title')}</h2>
+          {entries.length > 0 && (
+            <Button variant={ButtonVariant.GHOST} size="sm" onClick={clearEntries}>
+              {t('log.clear')}
+            </Button>
+          )}
         </div>
-      )}
-    </Card>
+
+        {entries.length === 0 && <p className="text-sm text-text-muted text-center py-8">{t('log.empty')}</p>}
+
+        {entries.length > 0 && (
+          <div className="flex flex-col gap-1 max-h-[600px] overflow-y-auto">
+            {entries.map((entry) => (
+              <div key={entry.id} className="flex flex-col gap-1 px-2.5 py-2 bg-bg-secondary rounded text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={entry.success ? BadgeVariant.SUCCESS : BadgeVariant.DANGER}>
+                      {entry.success ? 'OK' : 'FAIL'}
+                    </Badge>
+                    <span className="font-medium">{entry.domain}</span>
+                    <span className="text-text-muted">{entry.recordType}</span>
+                  </div>
+                  <span className="text-text-muted">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <div className="flex items-center gap-2 text-text-muted">
+                  <span>
+                    {entry.protocol.toUpperCase()} → {entry.server}
+                  </span>
+                  <span>{Math.round(entry.latencyMs)}ms</span>
+                </div>
+                {entry.detail && <span className="text-danger">{entry.detail}</span>}
+                {entry.answers.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {entry.answers.map((ans: string, i: number) => (
+                      <code key={i} className="text-xs bg-bg-card px-1.5 py-0.5 rounded">
+                        {ans}
+                      </code>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </ErrorBoundary>
-  )
+  );
 }

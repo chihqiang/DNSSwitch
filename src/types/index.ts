@@ -1,18 +1,5 @@
-export type {
-  DnsServer,
-  DnsProvider,
-  DnsStatus,
-  DnsQueryResult,
-  DnsLatencyTest,
-  DnsLeakResult,
-  DnsEvent,
-} from './dns'
-export {
-  DnsProviderKey,
-  DnsProviderInfo,
-  DnsServerTag,
-  PRESET_SERVERS,
-} from './dns'
+export type { DnsServer, DnsProvider, DnsStatus, DnsQueryResult, DnsLatencyTest, DnsLeakResult, DnsEvent } from './dns';
+export { DnsProviderKey, DnsProviderInfo, DnsServerTag, PRESET_SERVERS } from './dns';
 
 export type {
   AppConfig,
@@ -23,30 +10,15 @@ export type {
   ScheduleAction,
   AppSettings,
   ThemeConfig,
-} from './config'
-export {
-  ThemeMode,
-  ScheduleConditionType,
-  DEFAULT_CONFIG,
-} from './config'
+} from './config';
+export { ThemeMode, ScheduleConditionType, DEFAULT_CONFIG } from './config';
 
-export type {
-  NetworkInterface,
-  NetworkService,
-  SystemInfo,
-  AppInfo,
-} from './system'
+export type { NetworkInterface, NetworkService, SystemInfo, AppInfo } from './system';
 
-export type {
-  RequestLogEntry,
-} from './requestLog'
+export type { RequestLogEntry } from './requestLog';
 
-export type {
-  DnsHealthEvent,
-} from './health'
+export type { DnsHealthEvent } from './health';
 
-export type {
-  ScheduleEventPayload,
-} from './scheduleEvent'
+export type { ScheduleEventPayload } from './scheduleEvent';
 
-export { NetworkInterfaceType } from './system'
+export { NetworkInterfaceType } from './system';

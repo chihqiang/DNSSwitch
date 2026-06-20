@@ -1,1 +1,1 @@
-export { AddRuleForm } from './AddRuleForm'
+export { AddRuleForm } from './AddRuleForm';

@@ -1,26 +1,26 @@
-import { useTranslation } from 'react-i18next'
-import { useDnsStatus, useDnsServers } from '@/hooks'
-import { DnsServerCard } from './DnsServerCard'
-import { Button, ButtonVariant, EmptyState } from '@/components/common'
-import type { DnsServer } from '@/types'
+import { useTranslation } from 'react-i18next';
+import { useDnsStatus, useDnsServers } from '@/hooks';
+import { DnsServerCard } from './DnsServerCard';
+import { Button, ButtonVariant, EmptyState } from '@/components/common';
+import type { DnsServer } from '@/types';
 
 interface DnsServerListProps {
-  onEdit: (server: DnsServer) => void
-  onAdd: () => void
-  onDelete: (id: string, name: string) => void
+  onEdit: (server: DnsServer) => void;
+  onAdd: () => void;
+  onDelete: (id: string, name: string) => void;
 }
 
 export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
-  const { t } = useTranslation()
-  const { isSwitching, isTesting, switchDns, testLatency } = useDnsStatus()
-  const { servers, refreshLatency } = useDnsServers()
+  const { t } = useTranslation();
+  const { isSwitching, isTesting, switchDns, testLatency } = useDnsStatus();
+  const { servers, refreshLatency } = useDnsServers();
 
   async function handleSwitch(id: string) {
-    await switchDns(id)
+    await switchDns(id);
   }
 
   async function handleTest(id: string) {
-    await testLatency(id)
+    await testLatency(id);
   }
 
   return (
@@ -66,5 +66,5 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         ))}
       </div>
     </div>
-  )
+  );
 }

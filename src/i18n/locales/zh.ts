@@ -186,4 +186,4 @@ export default {
     light: '浅色',
     dark: '深色',
   },
-} as const
+} as const;

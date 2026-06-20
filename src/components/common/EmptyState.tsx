@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from 'react';
 
 interface Props {
-  icon?: string
-  title: string
-  description?: string
-  action?: ReactNode
+  icon?: string;
+  title: string;
+  description?: string;
+  action?: ReactNode;
 }
 
 export function EmptyState({ icon = '-', title, description, action }: Props) {
@@ -15,5 +15,5 @@ export function EmptyState({ icon = '-', title, description, action }: Props) {
       {description && <p className="text-xs text-text-muted/70 max-w-xs">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
-  )
+  );
 }

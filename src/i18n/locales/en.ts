@@ -186,4 +186,4 @@ export default {
     light: 'Light',
     dark: 'Dark',
   },
-} as const
+} as const;

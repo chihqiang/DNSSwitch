@@ -1,38 +1,41 @@
-import { useState, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { SchedulePanel } from '@/components/Schedule'
-import { AddRuleForm } from '@/components/AddRuleForm'
-import { Modal, Button, ButtonVariant, ErrorBoundary } from '@/components/common'
-import { useConfigStore } from '@/stores'
-import type { ScheduleRule } from '@/types'
+import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SchedulePanel } from '@/components/Schedule';
+import { AddRuleForm } from '@/components/AddRuleForm';
+import { Modal, Button, ButtonVariant, ErrorBoundary } from '@/components/common';
+import { useConfigStore } from '@/stores';
+import type { ScheduleRule } from '@/types';
 
 export function SchedulePage() {
-  const { t } = useTranslation()
-  const [editingRule, setEditingRule] = useState<ScheduleRule | null>(null)
-  const [showAddRule, setShowAddRule] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const { addScheduleRule, updateScheduleRule, removeScheduleRule } = useConfigStore()
+  const { t } = useTranslation();
+  const [editingRule, setEditingRule] = useState<ScheduleRule | null>(null);
+  const [showAddRule, setShowAddRule] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { addScheduleRule, updateScheduleRule, removeScheduleRule } = useConfigStore();
 
   const handleEdit = (rule: ScheduleRule) => {
-    setEditingRule(rule)
-    setShowAddRule(true)
-  }
+    setEditingRule(rule);
+    setShowAddRule(true);
+  };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return
-    setIsDeleting(true)
-    setDeleteError(null)
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await removeScheduleRule(deleteTarget.id)
-      setDeleteTarget(null)
+      await removeScheduleRule(deleteTarget.id);
+      setDeleteTarget(null);
     } catch (e) {
-      setDeleteError(String(e))
+      setDeleteError(String(e));
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleFormSubmit = useCallback(
     (rule: ScheduleRule) => {
@@ -43,19 +46,19 @@ export function SchedulePage() {
           action: rule.action,
           priority: rule.priority,
           description: rule.description,
-        })
+        });
       } else {
-        addScheduleRule(rule)
+        addScheduleRule(rule);
       }
-      setShowAddRule(false)
-      setEditingRule(null)
+      setShowAddRule(false);
+      setEditingRule(null);
     },
-    [editingRule, addScheduleRule, updateScheduleRule]
-  )
+    [editingRule, addScheduleRule, updateScheduleRule],
+  );
 
   function closeForm() {
-    setShowAddRule(false)
-    setEditingRule(null)
+    setShowAddRule(false);
+    setEditingRule(null);
   }
 
   return (
@@ -71,18 +74,10 @@ export function SchedulePage() {
         onClose={closeForm}
         title={editingRule ? t('schedule.edit_title') : t('schedule.add_title')}
       >
-        <AddRuleForm
-          editingRule={editingRule}
-          onSubmit={handleFormSubmit}
-          onCancel={closeForm}
-        />
+        <AddRuleForm editingRule={editingRule} onSubmit={handleFormSubmit} onCancel={closeForm} />
       </Modal>
 
-      <Modal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        title={t('common.confirm')}
-      >
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('common.confirm')}>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-secondary">
             {deleteTarget && t('common.confirm_delete', { name: deleteTarget.name })}
@@ -99,5 +94,5 @@ export function SchedulePage() {
         </div>
       </Modal>
     </ErrorBoundary>
-  )
+  );
 }

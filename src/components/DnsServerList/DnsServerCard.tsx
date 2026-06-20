@@ -1,16 +1,16 @@
-import { useTranslation } from 'react-i18next'
-import type { DnsServer } from '@/types'
-import { Card, Badge, Button, ButtonVariant, BadgeVariant } from '@/components/common'
-import { getLatencyBadgeVariant } from '@/constants'
+import { useTranslation } from 'react-i18next';
+import type { DnsServer } from '@/types';
+import { Card, Badge, Button, ButtonVariant, BadgeVariant } from '@/components/common';
+import { getLatencyBadgeVariant } from '@/constants';
 
 interface DnsServerCardProps {
-  server: DnsServer
-  onSwitch: (id: string) => void
-  onTest: (id: string) => void
-  onEdit: (server: DnsServer) => void
-  onDelete: (id: string, name: string) => void
-  isSwitching: boolean
-  isTesting: boolean
+  server: DnsServer;
+  onSwitch: (id: string) => void;
+  onTest: (id: string) => void;
+  onEdit: (server: DnsServer) => void;
+  onDelete: (id: string, name: string) => void;
+  isSwitching: boolean;
+  isTesting: boolean;
 }
 
 export function DnsServerCard({
@@ -22,17 +22,15 @@ export function DnsServerCard({
   isSwitching,
   isTesting,
 }: DnsServerCardProps) {
-  const { t } = useTranslation()
-  const latency = server.latency
+  const { t } = useTranslation();
+  const latency = server.latency;
 
   return (
     <Card className={`flex flex-col gap-3 p-3 ${server.isActive ? 'border-success' : ''}`}>
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-0.5">
           <h3 className="text-sm font-semibold">{server.name}</h3>
-          <span className="text-xs text-text-muted">
-            {t('dns_provider.' + server.provider.name)}
-          </span>
+          <span className="text-xs text-text-muted">{t('dns_provider.' + server.provider.name)}</span>
         </div>
         {server.isActive && <Badge variant={BadgeVariant.SUCCESS}>{t('common.active')}</Badge>}
       </div>
@@ -51,7 +49,9 @@ export function DnsServerCard({
             </Badge>
           )}
           {server.tags.map((tag) => (
-            <Badge key={tag} variant={BadgeVariant.INFO}>{t('tag.' + tag)}</Badge>
+            <Badge key={tag} variant={BadgeVariant.INFO}>
+              {t('tag.' + tag)}
+            </Badge>
           ))}
           {server.dohUrl && <Badge variant={BadgeVariant.INFO}>DoH</Badge>}
           {server.dotAddress && <Badge variant={BadgeVariant.INFO}>DoT</Badge>}
@@ -83,15 +83,11 @@ export function DnsServerCard({
           {t('common.edit')}
         </Button>
         {!server.isSystem && (
-          <Button
-            variant={ButtonVariant.DANGER}
-            size="sm"
-            onClick={() => onDelete(server.id, server.name)}
-          >
+          <Button variant={ButtonVariant.DANGER} size="sm" onClick={() => onDelete(server.id, server.name)}>
             {t('common.delete')}
           </Button>
         )}
       </div>
     </Card>
-  )
+  );
 }

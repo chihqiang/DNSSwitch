@@ -1,39 +1,26 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
-
-export const ButtonVariant = {
-  PRIMARY: 'primary',
-  SECONDARY: 'secondary',
-  DANGER: 'danger',
-  GHOST: 'ghost',
-} as const
-export type ButtonVariant = (typeof ButtonVariant)[keyof typeof ButtonVariant]
-
-export const ButtonSize = {
-  SM: 'sm',
-  MD: 'md',
-  LG: 'lg',
-} as const
-export type ButtonSize = (typeof ButtonSize)[keyof typeof ButtonSize]
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { ButtonVariant, ButtonSize } from './variants';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  children: ReactNode
-  variant?: ButtonVariant
-  size?: ButtonSize
-  isLoading?: boolean
+  children: ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  isLoading?: boolean;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
   [ButtonVariant.PRIMARY]: 'bg-accent text-white border-accent hover:bg-accent-hover',
   [ButtonVariant.SECONDARY]: 'bg-bg-secondary text-text-primary border-border hover:bg-border',
   [ButtonVariant.DANGER]: 'bg-danger text-white border-danger hover:opacity-90',
-  [ButtonVariant.GHOST]: 'bg-transparent text-text-secondary border-transparent hover:bg-bg-secondary hover:text-text-primary',
-}
+  [ButtonVariant.GHOST]:
+    'bg-transparent text-text-secondary border-transparent hover:bg-bg-secondary hover:text-text-primary',
+};
 
 const sizeClasses: Record<ButtonSize, string> = {
   [ButtonSize.SM]: 'px-3 py-1 text-xs',
   [ButtonSize.MD]: 'px-4 py-2 text-sm',
   [ButtonSize.LG]: 'px-5 py-2.5 text-base',
-}
+};
 
 export function Button({
   children,
@@ -55,5 +42,5 @@ export function Button({
       )}
       {children}
     </button>
-  )
+  );
 }

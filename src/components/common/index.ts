@@ -1,10 +1,12 @@
-export { Card } from './Card'
-export { Button, ButtonVariant, ButtonSize } from './Button'
-export type { ButtonVariant as ButtonVariantType, ButtonSize as ButtonSizeType } from './Button'
-export { Modal } from './Modal'
-export { Select } from './Select'
-export { Badge, BadgeVariant } from './Badge'
-export type { BadgeVariant as BadgeVariantType } from './Badge'
-export { ErrorBoundary } from './ErrorBoundary'
-export { LoadingSpinner } from './LoadingSpinner'
-export { EmptyState } from './EmptyState'
+export { Card } from './Card';
+export { Button } from './Button';
+export { ButtonVariant, ButtonSize } from './variants';
+export type { ButtonVariant, ButtonSize } from './variants';
+export { Modal } from './Modal';
+export { Select } from './Select';
+export { Badge } from './Badge';
+export { BadgeVariant } from './variants';
+export type { BadgeVariant } from './variants';
+export { ErrorBoundary } from './ErrorBoundary';
+export { LoadingSpinner } from './LoadingSpinner';
+export { EmptyState } from './EmptyState';

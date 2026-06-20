@@ -1,13 +1,12 @@
-import { useTranslation } from 'react-i18next'
-import { useDnsStatus, useDnsServers } from '@/hooks'
-import { Card, Badge, Button, ButtonVariant } from '@/components/common'
-import { getLatencyBadgeVariant } from '@/constants'
+import { useTranslation } from 'react-i18next';
+import { useDnsStatus, useDnsServers } from '@/hooks';
+import { Card, Badge, Button, ButtonVariant } from '@/components/common';
+import { getLatencyBadgeVariant } from '@/constants';
 
 export function DnsSwitcher() {
-  const { t } = useTranslation()
-  const { currentStatus, isSwitching, switchDns, resetToSystem } =
-    useDnsStatus()
-  const { servers } = useDnsServers()
+  const { t } = useTranslation();
+  const { currentStatus, isSwitching, switchDns, resetToSystem } = useDnsStatus();
+  const { servers } = useDnsServers();
 
   return (
     <Card className="flex flex-col gap-3 p-3">
@@ -34,7 +33,9 @@ export function DnsSwitcher() {
                 </span>
                 {server.latency !== undefined && (
                   <Badge variant={getLatencyBadgeVariant(server.latency)}>
-                    {t('status.latency_ms', { latency: Math.round(server.latency) })}
+                    {t('status.latency_ms', {
+                      latency: Math.round(server.latency),
+                    })}
                   </Badge>
                 )}
               </div>
@@ -63,5 +64,5 @@ export function DnsSwitcher() {
         </Button>
       </div>
     </Card>
-  )
+  );
 }

@@ -13,8 +13,8 @@ export const DnsProviderKey = {
   ALIDNS: 'alidns',
   DNSPOD: 'dnspod',
   CUSTOM: 'custom',
-} as const
-export type DnsProviderKey = (typeof DnsProviderKey)[keyof typeof DnsProviderKey]
+} as const;
+export type DnsProviderKey = (typeof DnsProviderKey)[keyof typeof DnsProviderKey];
 
 export const DnsServerTag = {
   PUBLIC: 'public',
@@ -22,8 +22,8 @@ export const DnsServerTag = {
   FAST: 'fast',
   SECURITY: 'security',
   FAMILY: 'family',
-} as const
-export type DnsServerTag = (typeof DnsServerTag)[keyof typeof DnsServerTag]
+} as const;
+export type DnsServerTag = (typeof DnsServerTag)[keyof typeof DnsServerTag];
 
 export const DnsProviderInfo = {
   [DnsProviderKey.SYSTEM]: {
@@ -108,72 +108,72 @@ export const DnsProviderInfo = {
     displayName: 'Custom',
     description: 'Custom DNS server',
   },
-} as const
+} as const;
 
 export interface DnsServer {
-  id: string
-  name: string
-  addresses: string[]
-  provider: DnsProvider
-  latency?: number
-  isActive: boolean
-  isSystem: boolean
-  tags: DnsServerTag[]
-  dohUrl?: string
-  dotAddress?: string
-  createdAt: number
-  updatedAt: number
+  id: string;
+  name: string;
+  addresses: string[];
+  provider: DnsProvider;
+  latency?: number;
+  isActive: boolean;
+  isSystem: boolean;
+  tags: DnsServerTag[];
+  dohUrl?: string;
+  dotAddress?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface DnsProvider {
-  name: string
-  displayName: string
-  website?: string
-  description?: string
+  name: string;
+  displayName: string;
+  website?: string;
+  description?: string;
 }
 
 export interface DnsStatus {
-  currentServers: string[]
-  networkService: string
-  isCustom: boolean
-  latency?: number
+  currentServers: string[];
+  networkService: string;
+  isCustom: boolean;
+  latency?: number;
 }
 
 export interface DnsEvent {
-  id: string
-  eventType: string
-  serverName: string
-  addresses: string[]
-  latencyMs?: number
-  success: boolean
-  detail?: string
-  timestamp: number
+  id: string;
+  eventType: string;
+  serverName: string;
+  addresses: string[];
+  latencyMs?: number;
+  success: boolean;
+  detail?: string;
+  timestamp: number;
 }
 
 export interface DnsQueryResult {
-  domain: string
-  recordType: string
-  answers: string[]
-  server: string
-  latency: number
-  timestamp: number
+  domain: string;
+  recordType: string;
+  answers: string[];
+  server: string;
+  latency: number;
+  timestamp: number;
 }
 
 export interface DnsLeakResult {
-  expectedServers: string[]
-  actualServers: string[]
-  leakDetected: boolean
-  isReachable: boolean
-  latencyMs?: number
-  detail: string
+  expectedServers: string[];
+  actualServers: string[];
+  leakDetected: boolean;
+  isReachable: boolean;
+  latencyMs?: number;
+  detail: string;
 }
 
 export interface DnsLatencyTest {
-  serverId: string
-  address: string
-  latencyMs: number
-  success: boolean
-  error?: string
+  serverId: string;
+  address: string;
+  latencyMs: number;
+  success: boolean;
+  error?: string;
 }
 
 export const PRESET_SERVERS: DnsServer[] = [
@@ -322,4 +322,4 @@ export const PRESET_SERVERS: DnsServer[] = [
     createdAt: 0,
     updatedAt: 0,
   },
-]
+];

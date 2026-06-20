@@ -1,24 +1,24 @@
-import { useTranslation } from 'react-i18next'
-import type { ScheduleRule as ScheduleRuleType } from '@/types'
-import { useConfigStore } from '@/stores'
-import { ScheduleRule } from './ScheduleRule'
-import { Card, Button, ButtonVariant } from '@/components/common'
+import { useTranslation } from 'react-i18next';
+import type { ScheduleRule as ScheduleRuleType } from '@/types';
+import { useConfigStore } from '@/stores';
+import { ScheduleRule } from './ScheduleRule';
+import { Card, Button, ButtonVariant } from '@/components/common';
 
 interface SchedulePanelProps {
-  onAdd: () => void
-  onEdit: (rule: ScheduleRuleType) => void
-  onDelete: (id: string, name: string) => void
+  onAdd: () => void;
+  onEdit: (rule: ScheduleRuleType) => void;
+  onDelete: (id: string, name: string) => void;
 }
 
 export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
-  const { t } = useTranslation()
-  const { config, setScheduleEnabled } = useConfigStore()
-  const { rules, enabled } = config.schedule
+  const { t } = useTranslation();
+  const { config, setScheduleEnabled } = useConfigStore();
+  const { rules, enabled } = config.schedule;
 
   function handleToggle(id: string) {
-    const rule = rules.find((r) => r.id === id)
+    const rule = rules.find((r) => r.id === id);
     if (rule) {
-      useConfigStore.getState().updateScheduleRule(id, { enabled: !rule.enabled })
+      useConfigStore.getState().updateScheduleRule(id, { enabled: !rule.enabled });
     }
   }
 
@@ -34,8 +34,12 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
               checked={enabled}
               onChange={(e) => setScheduleEnabled(e.target.checked)}
             />
-            <span className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${enabled ? 'bg-accent' : 'bg-border'}`}>
-              <span className={`absolute w-4 h-4 bg-white rounded-full top-0.5 left-0.5 transition-transform duration-200 ${enabled ? 'translate-x-4' : ''}`} />
+            <span
+              className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${enabled ? 'bg-accent' : 'bg-border'}`}
+            >
+              <span
+                className={`absolute w-4 h-4 bg-white rounded-full top-0.5 left-0.5 transition-transform duration-200 ${enabled ? 'translate-x-4' : ''}`}
+              />
             </span>
           </label>
           <Button variant={ButtonVariant.PRIMARY} size="sm" onClick={onAdd}>
@@ -44,9 +48,7 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
         </div>
       </div>
 
-      {!enabled && (
-        <p className="text-sm text-text-muted text-center py-6">{t('schedule.disabled_hint')}</p>
-      )}
+      {!enabled && <p className="text-sm text-text-muted text-center py-6">{t('schedule.disabled_hint')}</p>}
 
       {enabled && rules.length === 0 && (
         <p className="text-sm text-text-muted text-center py-6">{t('schedule.empty_hint')}</p>
@@ -55,16 +57,10 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
       {enabled && rules.length > 0 && (
         <div className="flex flex-col gap-2">
           {rules.map((rule) => (
-            <ScheduleRule
-              key={rule.id}
-              rule={rule}
-              onToggle={handleToggle}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
+            <ScheduleRule key={rule.id} rule={rule} onToggle={handleToggle} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </div>
       )}
     </Card>
-  )
+  );
 }

@@ -1,37 +1,38 @@
-import type { ReactNode } from 'react'
-import { useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
-import { KEY_ESCAPE } from '@/constants'
+import type { ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { KEY_ESCAPE } from '@/constants';
 
 interface ModalProps {
-  isOpen: boolean
-  onClose: () => void
-  title: string
-  children: ReactNode
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
 }
 
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
-  const { t } = useTranslation()
-  const overlayRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation();
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      return () => document.removeEventListener('keydown', handleEscape)
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === KEY_ESCAPE) onClose();
     }
-  }, [isOpen])
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isOpen, onClose]);
 
-  function handleEscape(e: KeyboardEvent) {
-    if (e.key === KEY_ESCAPE) onClose()
-  }
-
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div
       ref={overlayRef}
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-[fadeIn_0.15s_ease-out]"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
     >
       <div
         className="bg-bg-card rounded p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto shadow-modal animate-[scaleIn_0.15s_ease-out]"
@@ -55,5 +56,5 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         {children}
       </div>
     </div>
-  )
+  );
 }

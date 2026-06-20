@@ -1,40 +1,40 @@
-import { useState, useEffect, useCallback } from 'react'
-import { invoke } from '@tauri-apps/api/core'
-import { useTranslation } from 'react-i18next'
-import { Button, ButtonVariant, LoadingSpinner } from '@/components/common'
-import type { DnsEvent } from '@/types'
+import { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
+import { Button, ButtonVariant, LoadingSpinner } from '@/components/common';
+import type { DnsEvent } from '@/types';
 
 export function HistoryPanel() {
-  const { t } = useTranslation()
-  const [events, setEvents] = useState<DnsEvent[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const { t } = useTranslation();
+  const [events, setEvents] = useState<DnsEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setIsLoading(true)
-    setLoadError(null)
+    setIsLoading(true);
+    setLoadError(null);
     try {
-      const data = await invoke<DnsEvent[]>('get_history')
-      setEvents(data)
+      const data = await invoke<DnsEvent[]>('get_history');
+      setEvents(data);
     } catch (e) {
-      setLoadError(String(e))
-      setEvents([])
+      setLoadError(String(e));
+      setEvents([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    load()
-    const onFocus = () => load()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
-  }, [load])
+    load();
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [load]);
 
   const handleClear = async () => {
-    await invoke('clear_history')
-    setEvents([])
-  }
+    await invoke('clear_history');
+    setEvents([]);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -54,9 +54,7 @@ export function HistoryPanel() {
       )}
 
       {loadError && (
-        <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">
-          {loadError}
-        </div>
+        <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">{loadError}</div>
       )}
 
       {!isLoading && !loadError && events.length === 0 && (
@@ -69,17 +67,13 @@ export function HistoryPanel() {
             <div key={evt.id} className="flex flex-col gap-1 px-2.5 py-2 bg-bg-secondary rounded text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-medium">{evt.serverName}</span>
-                <span className="text-text-muted">
-                  {new Date(evt.timestamp).toLocaleString()}
-                </span>
+                <span className="text-text-muted">{new Date(evt.timestamp).toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-2 text-text-muted">
                 <span className={`${evt.success ? 'text-success' : 'text-danger'}`}>
                   {evt.success ? t('history.success') : t('history.failed')}
                 </span>
-                {evt.latencyMs !== undefined && (
-                  <span>{Math.round(evt.latencyMs)}ms</span>
-                )}
+                {evt.latencyMs !== undefined && <span>{Math.round(evt.latencyMs)}ms</span>}
                 <span>{evt.addresses.join(', ')}</span>
               </div>
               {evt.detail && <span className="text-text-muted">{evt.detail}</span>}
@@ -88,5 +82,5 @@ export function HistoryPanel() {
         </div>
       )}
     </div>
-  )
+  );
 }

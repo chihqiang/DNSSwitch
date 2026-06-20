@@ -1,30 +1,30 @@
-import { create } from 'zustand'
-import type { DnsServer, DnsStatus, DnsLatencyTest, DnsLeakResult, DnsHealthEvent } from '@/types'
-import { MAX_LATENCY_HISTORY } from '@/constants'
+import { create } from 'zustand';
+import type { DnsServer, DnsStatus, DnsLatencyTest, DnsLeakResult, DnsHealthEvent } from '@/types';
+import { MAX_LATENCY_HISTORY } from '@/constants';
 
 interface DnsState {
-  currentStatus: DnsStatus | null
-  servers: DnsServer[]
-  latencyTests: DnsLatencyTest[]
-  lastLeakResult: DnsLeakResult | null
-  healthStatus: DnsHealthEvent | null
-  isTesting: boolean
-  isSwitching: boolean
-  error: string | null
+  currentStatus: DnsStatus | null;
+  servers: DnsServer[];
+  latencyTests: DnsLatencyTest[];
+  lastLeakResult: DnsLeakResult | null;
+  healthStatus: DnsHealthEvent | null;
+  isTesting: boolean;
+  isSwitching: boolean;
+  error: string | null;
 
-  setCurrentStatus: (status: DnsStatus) => void
-  setServers: (servers: DnsServer[]) => void
-  addServer: (server: DnsServer) => void
-  removeServer: (id: string) => void
-  updateServer: (id: string, updates: Partial<DnsServer>) => void
-  setActiveServer: (id: string) => void
-  setLatencyTests: (tests: DnsLatencyTest[]) => void
-  addLatencyTest: (test: DnsLatencyTest) => void
-  setLastLeakResult: (result: DnsLeakResult | null) => void
-  setHealthStatus: (status: DnsHealthEvent | null) => void
-  setIsTesting: (v: boolean) => void
-  setIsSwitching: (v: boolean) => void
-  setError: (error: string | null) => void
+  setCurrentStatus: (status: DnsStatus) => void;
+  setServers: (servers: DnsServer[]) => void;
+  addServer: (server: DnsServer) => void;
+  removeServer: (id: string) => void;
+  updateServer: (id: string, updates: Partial<DnsServer>) => void;
+  setActiveServer: (id: string) => void;
+  setLatencyTests: (tests: DnsLatencyTest[]) => void;
+  addLatencyTest: (test: DnsLatencyTest) => void;
+  setLastLeakResult: (result: DnsLeakResult | null) => void;
+  setHealthStatus: (status: DnsHealthEvent | null) => void;
+  setIsTesting: (v: boolean) => void;
+  setIsSwitching: (v: boolean) => void;
+  setError: (error: string | null) => void;
 }
 
 export const useDnsStore = create<DnsState>((set) => ({
@@ -41,17 +41,13 @@ export const useDnsStore = create<DnsState>((set) => ({
 
   setServers: (servers) => set({ servers }),
 
-  addServer: (server) =>
-    set((state) => ({ servers: [...state.servers, server] })),
+  addServer: (server) => set((state) => ({ servers: [...state.servers, server] })),
 
-  removeServer: (id) =>
-    set((state) => ({ servers: state.servers.filter((s) => s.id !== id) })),
+  removeServer: (id) => set((state) => ({ servers: state.servers.filter((s) => s.id !== id) })),
 
   updateServer: (id, updates) =>
     set((state) => ({
-      servers: state.servers.map((s) =>
-        s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s
-      ),
+      servers: state.servers.map((s) => (s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s)),
     })),
 
   setActiveServer: (id) =>
@@ -77,4 +73,4 @@ export const useDnsStore = create<DnsState>((set) => ({
   setIsTesting: (v) => set({ isTesting: v }),
   setIsSwitching: (v) => set({ isSwitching: v }),
   setError: (error) => set({ error }),
-}))
+}));

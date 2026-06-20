@@ -1,1 +1,1 @@
-export { DnsSwitcher } from './DnsSwitcher'
+export { DnsSwitcher } from './DnsSwitcher';

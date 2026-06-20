@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet } from 'react-router-dom'
-import { useDnsStore } from '@/stores'
+import { useTranslation } from 'react-i18next';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useDnsStore } from '@/stores';
 
 export function Layout() {
-  const { t } = useTranslation()
-  const dnsError = useDnsStore((s) => s.error)
+  const { t } = useTranslation();
+  const dnsError = useDnsStore((s) => s.error);
 
   const tabs = [
     { path: '/servers', label: t('tab.servers') },
@@ -12,7 +12,7 @@ export function Layout() {
     { path: '/schedule', label: t('tab.schedule') },
     { path: '/log', label: t('tab.log') },
     { path: '/settings', label: t('tab.settings') },
-  ]
+  ];
 
   return (
     <div className="flex-1 flex flex-col p-4 gap-4">
@@ -46,5 +46,5 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

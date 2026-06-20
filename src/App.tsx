@@ -1,46 +1,50 @@
-import { Suspense, useEffect, useCallback } from 'react'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { listen } from '@tauri-apps/api/event'
-import { Layout } from '@/components/Layout/Layout'
-import { ServersPage } from '@/pages/ServersPage'
-import { QueryPage } from '@/pages/QueryPage'
-import { SchedulePage } from '@/pages/SchedulePage'
-import { SettingsPage } from '@/pages/SettingsPage'
-import { LogPage } from '@/pages/LogPage'
-import { StatusBar } from '@/components/StatusBar'
-import { ErrorBoundary, LoadingSpinner } from '@/components/common'
-import { useConfig } from '@/hooks'
-import { useDnsStore, useScheduleStore } from '@/stores'
-import type { DnsHealthEvent, ScheduleEventPayload } from '@/types'
+import { Suspense, useEffect, useCallback } from 'react';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { listen } from '@tauri-apps/api/event';
+import { Layout } from '@/components/Layout/Layout';
+import { ServersPage } from '@/pages/ServersPage';
+import { QueryPage } from '@/pages/QueryPage';
+import { SchedulePage } from '@/pages/SchedulePage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { LogPage } from '@/pages/LogPage';
+import { StatusBar } from '@/components/StatusBar';
+import { ErrorBoundary, LoadingSpinner } from '@/components/common';
+import { useConfig } from '@/hooks';
+import { useDnsStore, useScheduleStore } from '@/stores';
+import type { DnsHealthEvent, ScheduleEventPayload } from '@/types';
 
 function AppContent() {
-  const { loadConfig } = useConfig()
-  const setHealthStatus = useDnsStore((s) => s.setHealthStatus)
-  const showToast = useScheduleStore((s) => s.showToast)
-  const toast = useScheduleStore((s) => s.toast)
-  const clearToast = useScheduleStore((s) => s.clearToast)
+  const { loadConfig } = useConfig();
+  const setHealthStatus = useDnsStore((s) => s.setHealthStatus);
+  const showToast = useScheduleStore((s) => s.showToast);
+  const toast = useScheduleStore((s) => s.toast);
+  const clearToast = useScheduleStore((s) => s.clearToast);
 
   useEffect(() => {
-    loadConfig()
-  }, [loadConfig])
+    loadConfig();
+  }, [loadConfig]);
 
   useEffect(() => {
     const unlisten = listen<DnsHealthEvent>('dns-health-changed', (event) => {
-      setHealthStatus(event.payload)
-    })
-    return () => { unlisten.then((fn) => fn()) }
-  }, [setHealthStatus])
+      setHealthStatus(event.payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [setHealthStatus]);
 
   useEffect(() => {
     const unlisten = listen<ScheduleEventPayload>('schedule-event', (event) => {
-      showToast(event.payload)
-    })
-    return () => { unlisten.then((fn) => fn()) }
-  }, [showToast])
+      showToast(event.payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [showToast]);
 
   const handleToastClick = useCallback(() => {
-    clearToast()
-  }, [clearToast])
+    clearToast();
+  }, [clearToast]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -66,19 +70,25 @@ function AppContent() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoadingSpinner size={24} /></div>}>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <LoadingSpinner size={24} />
+          </div>
+        }
+      >
         <HashRouter>
           <AppContent />
         </HashRouter>
       </Suspense>
     </ErrorBoundary>
-  )
+  );
 }
 
-export default App
+export default App;

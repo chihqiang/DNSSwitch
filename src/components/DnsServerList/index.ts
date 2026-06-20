@@ -1,2 +1,2 @@
-export { DnsServerList } from './DnsServerList'
-export { DnsServerCard } from './DnsServerCard'
+export { DnsServerList } from './DnsServerList';
+export { DnsServerCard } from './DnsServerCard';
