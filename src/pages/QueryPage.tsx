@@ -1,18 +1,17 @@
+// ============================================================
+// QueryPage DNS 查询工具页面
+// 支持 UDP / DoH / DoT 三种协议，多种记录类型查询
+// ============================================================
+
 import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonVariant, Card, Select, EmptyState, ErrorBoundary } from '@/components/common';
 import { useDnsServers } from '@/hooks';
 import { useRequestLogStore } from '@/stores';
+import type { DnsQueryResult } from '@/types';
 
-interface DnsQueryResult {
-  domain: string;
-  recordType: string;
-  answers: string[];
-  server: string;
-  latencyMs: number;
-}
-
+/** DNS 记录类型选项 */
 const RECORD_TYPES = [
   { value: 'A', label: 'A' },
   { value: 'AAAA', label: 'AAAA' },
@@ -23,18 +22,21 @@ const RECORD_TYPES = [
   { value: 'SOA', label: 'SOA' },
 ];
 
+/** 查询协议选项 */
 const PROTOCOLS = [
   { value: 'udp', label: 'UDP' },
   { value: 'doh', label: 'DoH' },
   { value: 'dot', label: 'DoT' },
 ];
 
+/** 各协议对应的端点输入标签 */
 const ENDPOINT_LABELS: Record<string, string> = {
   udp: 'DNS Server',
   doh: 'DoH URL',
   dot: 'DoT Address',
 };
 
+/** 各协议对应的输入占位符 */
 const ENDPOINT_PLACEHOLDERS: Record<string, string> = {
   udp: '1.1.1.1',
   doh: 'https://dns.example.com/dns-query',
@@ -53,6 +55,7 @@ export function QueryPage() {
   const [error, setError] = useState<string | null>(null);
   const addLogEntry = useRequestLogStore((s) => s.addEntry);
 
+  /** 根据协议和已有服务器列表生成快速选择选项 */
   const serverOptions = useMemo(() => {
     if (protocol === 'udp') {
       return servers
@@ -70,6 +73,7 @@ export function QueryPage() {
 
   const hasEndpoint = endpoint.trim().length > 0;
 
+  /** 执行 DNS 查询 */
   const handleQuery = useCallback(async () => {
     if (!domain.trim()) return;
     const ep = endpoint.trim() || serverOptions[0]?.value;
@@ -101,6 +105,7 @@ export function QueryPage() {
         });
       }
       setResult(res);
+      // 记录成功日志
       addLogEntry({
         id: `log-${Date.now()}`,
         timestamp: Date.now(),
@@ -115,6 +120,7 @@ export function QueryPage() {
       });
     } catch (e) {
       setError(String(e));
+      // 记录失败日志
       addLogEntry({
         id: `log-${Date.now()}`,
         timestamp: Date.now(),
@@ -139,6 +145,7 @@ export function QueryPage() {
         <h2 className="text-sm font-semibold">{t('query.title')}</h2>
 
         <div className="flex flex-col gap-3">
+          {/* 第一行：域名 + 记录类型 + 协议 */}
           <div className="flex items-end gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="text-xs text-text-secondary">{t('query.domain')}</label>
@@ -177,6 +184,7 @@ export function QueryPage() {
             </div>
           </div>
 
+          {/* 第二行：端点地址 + 查询按钮 + 快速选择 */}
           <div className="flex items-end gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="text-xs text-text-secondary">{ENDPOINT_LABELS[protocol]}</label>
@@ -198,6 +206,7 @@ export function QueryPage() {
               </div>
             </div>
 
+            {/* 快速选择下拉框 */}
             {serverOptions.length > 0 && (
               <div className="flex flex-col gap-1.5 min-w-[180px]">
                 <label className="text-xs text-text-secondary">{t('query.quick_select')}</label>
@@ -218,14 +227,17 @@ export function QueryPage() {
           </div>
         </div>
 
+        {/* 无服务器时的空状态提示 */}
         {servers.length === 0 && (
           <EmptyState icon="~" title={t('query.no_servers_title')} description={t('query.no_servers_desc')} />
         )}
 
+        {/* 错误提示 */}
         {error && (
           <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">{error}</div>
         )}
 
+        {/* 查询结果 */}
         {result && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3 text-xs text-text-secondary">

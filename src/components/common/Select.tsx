@@ -1,3 +1,8 @@
+// ============================================================
+// Select 下拉选择组件
+// 带 label 的原生 select 封装
+// ============================================================
+
 import type { SelectHTMLAttributes } from 'react';
 
 interface SelectOption {

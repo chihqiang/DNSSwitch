@@ -1,3 +1,9 @@
+// ============================================================
+// DNSSwitch Tauri 应用核心
+// 负责应用启动、插件注册、系统托盘菜单、全局快捷键、
+// 窗口事件处理和 Tauri 命令注册
+// ============================================================
+
 mod commands;
 mod config;
 mod dns;
@@ -10,18 +16,25 @@ use tauri::menu::{IsMenuItem, Menu, MenuItem, MenuItemBuilder, PredefinedMenuIte
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 
+/// 全局托盘图标实例（用于运行时更新菜单）
 static TRAY: OnceLock<TrayIcon<tauri::Wry>> = OnceLock::new();
 
+/// 应用主入口：配置 Tauri Builder、注册插件、启动监控和调度引擎
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // 文件/URL 打开插件
         .plugin(tauri_plugin_opener::init())
+        // 文件对话框插件
         .plugin(tauri_plugin_dialog::init())
+        // 自启动插件（macOS 使用 LaunchAgent）
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
+        // 系统通知插件
         .plugin(tauri_plugin_notification::init())
+        // 全局快捷键插件（Ctrl+Shift+D 切换窗口显隐）
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
@@ -44,18 +57,22 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
+            // 启动后台健康监控和调度引擎线程
             dns::monitor::spawn_monitor(handle.clone());
             dns::schedule::spawn_schedule_engine(handle.clone());
 
+            // 注册全局快捷键
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
             app.global_shortcut()
                 .register("Ctrl+Shift+D")
                 .expect("Failed to register global shortcut");
 
+            // 构建系统托盘
             setup_tray(app)?;
 
             Ok(())
         })
+        // 窗口关闭事件：如果设置了最小化到托盘，则隐藏窗口而非退出
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if let Ok(config) = config::load_config() {
@@ -66,6 +83,7 @@ pub fn run() {
                 }
             }
         })
+        // 注册所有 Tauri 命令处理器（供前端 invoke 调用）
         .invoke_handler(tauri::generate_handler![
             commands::dns::get_current_dns,
             commands::dns::switch_dns,
@@ -93,6 +111,7 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
+/// 初始化系统托盘：加载图标、构建菜单、注册事件处理器
 fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let icon = {
         let img = image::load_from_memory(include_bytes!("../icons/32x32.png"))
@@ -107,7 +126,9 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let tray = TrayIconBuilder::new()
         .icon(icon)
         .menu(&initial_menu)
+        // 菜单项点击事件
         .on_menu_event(|app, event| handle_tray_menu_event(app, &event))
+        // 左键点击托盘图标：显示/聚焦主窗口
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -128,6 +149,7 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// 托盘菜单事件处理
 fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent) {
     match event.id.as_ref() {
         "show" => {
@@ -144,6 +166,7 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
                 eprintln!("Failed to reset DNS: {}", e);
             }
         }
+        // 切换 DNS 菜单项：id 格式为 "switch_{server_id}"
         id if id.starts_with("switch_") => {
             let server_id = id.strip_prefix("switch_").unwrap_or("");
             if let Ok(config) = config::load_config() {
@@ -163,6 +186,7 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
     }
 }
 
+/// 重建托盘菜单（DNS 切换后更新当前 DNS 状态标签和激活标记）
 pub fn rebuild_tray_menu(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let menu = build_tray_menu(app)?;
     if let Some(tray) = TRAY.get() {
@@ -171,13 +195,16 @@ pub fn rebuild_tray_menu(app: &tauri::AppHandle) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+/// 构建托盘菜单结构
 fn build_tray_menu(
     app: &tauri::AppHandle,
 ) -> Result<Menu<tauri::Wry>, Box<dyn std::error::Error>> {
     let config = config::load_config().ok();
 
+    // 顶部：显示主窗口
     let show = MenuItemBuilder::with_id("show", "Show DNSSwitch").build(app)?;
 
+    // 当前 DNS 状态（不可点击的标签）
     let current_server = config
         .as_ref()
         .and_then(|c| c.servers.iter().find(|s| s.is_active));
@@ -194,10 +221,11 @@ fn build_tray_menu(
     let sep3 = PredefinedMenuItem::separator(app)?;
     let sep4 = PredefinedMenuItem::separator(app)?;
 
+    // 底部操作
     let reset = MenuItemBuilder::with_id("reset_dns", "Reset to System DNS").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
-    // Build server items (keep owned alive until menu is built)
+    // 动态生成 DNS 服务器切换菜单项
     let mut server_items: Vec<MenuItem<tauri::Wry>> = Vec::new();
     if let Some(ref cfg) = config {
         for server in &cfg.servers {
@@ -214,6 +242,7 @@ fn build_tray_menu(
     let server_refs: Vec<&dyn IsMenuItem<tauri::Wry>> =
         server_items.iter().map(|i| i as &dyn IsMenuItem<tauri::Wry>).collect();
 
+    // 组装菜单项顺序
     let mut items: Vec<&dyn IsMenuItem<tauri::Wry>> = Vec::new();
     items.push(&show);
     items.push(&sep1);
@@ -228,5 +257,3 @@ fn build_tray_menu(
     let menu = Menu::with_items(app, &items)?;
     Ok(menu)
 }
-
-

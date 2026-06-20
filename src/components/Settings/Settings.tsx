@@ -1,3 +1,8 @@
+// ============================================================
+// Settings 设置面板组件
+// 包含常规设置、系统信息、历史记录、工具（导入/导出）四个标签页
+// ============================================================
+
 import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
@@ -14,17 +19,20 @@ interface SettingsProps {
   onSave: () => void;
 }
 
+/** 支持的语言列表 */
 const LANGUAGES = [
   { value: 'en', label: 'English' },
   { value: 'zh', label: '中文' },
 ];
 
+/** 主题选项 */
 const THEME_OPTIONS = [
   { value: ThemeMode.SYSTEM, key: 'theme.system' },
   { value: ThemeMode.LIGHT, key: 'theme.light' },
   { value: ThemeMode.DARK, key: 'theme.dark' },
 ];
 
+/** 设置标签页定义 */
 const TABS = [
   { key: 'general', labelKey: 'settings.general' },
   { key: 'system', labelKey: 'settings.system_info' },
@@ -34,6 +42,7 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key'];
 
+/** 系统信息行（标签: 值） */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
@@ -50,6 +59,9 @@ export function Settings({ onSave }: SettingsProps) {
   const { systemInfo, networkServices, loading: systemLoading } = useSystemInfo();
   const { settings } = config;
 
+  // ---- 导入/导出 ----
+
+  /** 导出配置为 JSON 文件 */
   const handleExport = useCallback(async () => {
     const path = await save({
       title: t('settings.export_config'),
@@ -65,6 +77,7 @@ export function Settings({ onSave }: SettingsProps) {
     }
   }, [t]);
 
+  /** 从 JSON 文件导入配置 */
   const handleImport = useCallback(async () => {
     const path = await open({
       title: t('settings.import_config'),
@@ -82,9 +95,12 @@ export function Settings({ onSave }: SettingsProps) {
     }
   }, [t, setConfig]);
 
+  /** 切换语言 */
   function handleLanguageChange(lng: string) {
     i18n.changeLanguage(lng);
   }
+
+  // ---- 标签页头部 ----
 
   const tabHeader = (
     <div className="flex gap-1 border-b border-border pb-2">
@@ -104,8 +120,11 @@ export function Settings({ onSave }: SettingsProps) {
     </div>
   );
 
+  // ---- 常规设置标签页 ----
+
   const generalTab = (
     <div className="flex flex-col gap-4">
+      {/* 通用开关 */}
       <section>
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.general')}</h3>
         <div className="flex flex-col gap-2">
@@ -162,6 +181,7 @@ export function Settings({ onSave }: SettingsProps) {
         </div>
       </section>
 
+      {/* 性能设置 */}
       <section>
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
           {t('settings.performance')}
@@ -186,6 +206,7 @@ export function Settings({ onSave }: SettingsProps) {
         </div>
       </section>
 
+      {/* 外观设置 */}
       <section>
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
           {t('settings.appearance')}
@@ -195,7 +216,7 @@ export function Settings({ onSave }: SettingsProps) {
             <span className="text-sm">{t('settings.language')}</span>
             <select
               className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
-              value={i18n.language.startsWith('zh') ? 'zh' : 'en'}
+              value={LANGUAGES.find((l) => i18n.language.startsWith(l.value))?.value ?? LANGUAGES[0].value}
               onChange={(e) => handleLanguageChange(e.target.value)}
             >
               {LANGUAGES.map((lng) => (
@@ -232,6 +253,8 @@ export function Settings({ onSave }: SettingsProps) {
       </div>
     </div>
   );
+
+  // ---- 系统信息标签页 ----
 
   const systemTab = (
     <div className="flex flex-col gap-4">
@@ -283,7 +306,11 @@ export function Settings({ onSave }: SettingsProps) {
     </div>
   );
 
+  // ---- 历史记录标签页 ----
+
   const historyTab = <HistoryPanel />;
+
+  // ---- 工具标签页 ----
 
   const toolsTab = (
     <div className="flex flex-col gap-3">
@@ -299,6 +326,7 @@ export function Settings({ onSave }: SettingsProps) {
     </div>
   );
 
+  /** 标签页内容映射 */
   const tabContent: Record<TabKey, React.ReactNode> = {
     general: generalTab,
     system: systemTab,

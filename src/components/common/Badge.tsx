@@ -1,3 +1,8 @@
+// ============================================================
+// Badge 标签组件
+// 用于展示状态标签，如"活跃"、"延迟"、标签分类等
+// ============================================================
+
 import type { ReactNode } from 'react';
 import { BadgeVariant } from './variants';
 
@@ -6,6 +11,7 @@ interface BadgeProps {
   variant?: BadgeVariant;
 }
 
+/** 各变体对应的 Tailwind CSS 类名 */
 const variantClasses: Record<BadgeVariant, string> = {
   [BadgeVariant.DEFAULT]: 'bg-bg-secondary text-text-muted',
   [BadgeVariant.SUCCESS]: 'bg-success-bg text-success',

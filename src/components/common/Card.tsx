@@ -1,8 +1,14 @@
+// ============================================================
+// Card 卡片容器组件
+// 统一的面板样式，可选点击交互
+// ============================================================
+
 import type { ReactNode, KeyboardEvent } from 'react';
 
 interface CardProps {
   children: ReactNode;
   className?: string;
+  /** 如传入 onClick，Card 将具备按钮交互（role=button, 键盘支持） */
   onClick?: () => void;
 }
 

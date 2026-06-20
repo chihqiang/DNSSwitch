@@ -1,9 +1,15 @@
+// ============================================================
+// EmptyState 空状态占位组件
+// 用于列表/面板无数据时的友好提示
+// ============================================================
+
 import type { ReactNode } from 'react';
 
 interface Props {
   icon?: string;
   title: string;
   description?: string;
+  /** 可选的操作按钮 */
   action?: ReactNode;
 }
 

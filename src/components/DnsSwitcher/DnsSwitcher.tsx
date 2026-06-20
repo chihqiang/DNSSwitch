@@ -1,3 +1,8 @@
+// ============================================================
+// DnsSwitcher DNS 快速切换组件
+// 列出所有非系统 DNS 服务器，支持一键切换
+// ============================================================
+
 import { useTranslation } from 'react-i18next';
 import { useDnsStatus, useDnsServers } from '@/hooks';
 import { Card, Badge, Button, ButtonVariant } from '@/components/common';
@@ -12,6 +17,7 @@ export function DnsSwitcher() {
     <Card className="flex flex-col gap-3 p-3">
       <h2 className="text-sm font-semibold">{t('status.quick_switch')}</h2>
 
+      {/* 当前 DNS 状态 */}
       <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary rounded text-sm">
         <span className="text-text-muted shrink-0">{t('status.current_dns')}</span>
         <code className="bg-transparent p-0 text-text-primary !text-sm font-medium">
@@ -19,6 +25,7 @@ export function DnsSwitcher() {
         </code>
       </div>
 
+      {/* 服务器列表（排除系统默认） */}
       <div className="flex flex-col gap-1">
         {servers
           .filter((s) => !s.isSystem)
@@ -52,6 +59,7 @@ export function DnsSwitcher() {
           ))}
       </div>
 
+      {/* 重置为系统默认 */}
       <div className="pt-2 border-t border-border">
         <Button
           variant={ButtonVariant.GHOST}

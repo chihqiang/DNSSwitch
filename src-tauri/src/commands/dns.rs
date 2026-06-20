@@ -1,3 +1,9 @@
+// ============================================================
+// DNS 相关 Tauri 命令
+// 提供 DNS 切换、重置、延迟测试、解析查询、泄露检测、
+// DoH/DoT 解析、历史记录等功能
+// ============================================================
+
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::dns::doh;
@@ -9,6 +15,7 @@ use crate::dns::resolver;
 use crate::dns::system_dns;
 use crate::dns::types::{DnsLatencyResult, DnsLeakResult, DnsStatus};
 
+/// 获取当前毫秒级时间戳
 fn now_millis() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -16,15 +23,18 @@ fn now_millis() -> u64 {
         .as_millis() as u64
 }
 
+/// 生成唯一事件 ID
 fn new_id() -> String {
     format!("evt-{}", now_millis())
 }
 
+/// 获取当前系统 DNS 配置状态
 #[tauri::command]
 pub fn get_current_dns() -> Result<DnsStatus, String> {
     system_dns::get_current_dns_status().map_err(|e| e.message)
 }
 
+/// 切换到指定的 DNS 服务器（通过 Tauri 前端调用入口）
 #[tauri::command(rename_all = "camelCase")]
 pub fn switch_dns(
     app_handle: tauri::AppHandle,
@@ -35,6 +45,8 @@ pub fn switch_dns(
     switch_dns_inner(&app_handle, server_id, server_name, addresses)
 }
 
+/// DNS 切换内部实现（供托盘菜单等内部调用）
+/// 执行系统 DNS 切换后记录历史事件、发送通知、重建托盘菜单
 pub fn switch_dns_inner(
     app_handle: &tauri::AppHandle,
     server_id: String,
@@ -74,6 +86,7 @@ pub fn switch_dns_inner(
     }
 }
 
+/// 发送 macOS 通知（仅在用户开启通知设置时发送）
 fn send_notification(_app_handle: &tauri::AppHandle, title: &str, body: &str) {
     let config = crate::config::load_config().ok();
     if config.map(|c| c.settings.notify_on_switch).unwrap_or(false) {
@@ -83,11 +96,13 @@ fn send_notification(_app_handle: &tauri::AppHandle, title: &str, body: &str) {
     }
 }
 
+/// 重置 DNS 为系统默认（Tauri 命令入口）
 #[tauri::command]
 pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
     reset_system_dns_inner(&app_handle)
 }
 
+/// 重置 DNS 为系统默认（内部实现，供托盘菜单调用）
 pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), String> {
     match system_dns::reset_to_system_dns() {
         Ok(()) => {
@@ -121,6 +136,7 @@ pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), Strin
     }
 }
 
+/// 记录自定义 DNS 事件到历史
 #[tauri::command(rename_all = "camelCase")]
 pub fn record_event(event_type: String, server_name: String, addresses: Vec<String>, success: bool, detail: Option<String>) -> Result<(), String> {
     let _ = history::add_event(DnsEvent {
@@ -136,6 +152,7 @@ pub fn record_event(event_type: String, server_name: String, addresses: Vec<Stri
     Ok(())
 }
 
+/// 检测 DNS 泄露：比对系统当前 DNS 与预期的 DNS 地址是否一致
 #[tauri::command(rename_all = "camelCase")]
 pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, String> {
     let actual = system_dns::get_current_dns_status().map_err(|e| e.message)?;
@@ -175,21 +192,25 @@ pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, 
     })
 }
 
+/// 获取 DNS 历史事件列表
 #[tauri::command(rename_all = "camelCase")]
 pub fn get_history() -> Result<Vec<history::DnsEvent>, String> {
     history::load_history().map_err(|e| e.message)
 }
 
+/// 清空 DNS 历史记录
 #[tauri::command(rename_all = "camelCase")]
 pub fn clear_history() -> Result<(), String> {
     history::save_history(&[]).map_err(|e| e.message)
 }
 
+/// 通过指定 DNS 服务器解析域名（UDP 53 端口）
 #[tauri::command(rename_all = "camelCase")]
 pub fn resolve_dns(domain: String, record_type: String, address: String) -> Result<query::DnsQueryResult, String> {
     query::resolve(&domain, &record_type, &address).map_err(|e| e.message)
 }
 
+/// 测试指定 DNS 服务器的延迟
 #[tauri::command(rename_all = "camelCase")]
 pub fn test_dns_latency(server_id: String, address: String) -> Result<DnsLatencyResult, String> {
     match resolver::measure_latency(&address) {
@@ -210,6 +231,7 @@ pub fn test_dns_latency(server_id: String, address: String) -> Result<DnsLatency
     }
 }
 
+/// 通过 DNS-over-HTTPS 解析域名
 #[tauri::command(rename_all = "camelCase")]
 pub async fn resolve_dns_doh(domain: String, record_type: String, doh_url: String) -> Result<query::DnsQueryResult, String> {
     doh::resolve_via_doh(&domain, &record_type, &doh_url)
@@ -217,16 +239,19 @@ pub async fn resolve_dns_doh(domain: String, record_type: String, doh_url: Strin
         .map_err(|e| e.message)
 }
 
+/// 通过 DNS-over-TLS 解析域名
 #[tauri::command(rename_all = "camelCase")]
 pub fn resolve_dns_dot(domain: String, record_type: String, dot_address: String) -> Result<query::DnsQueryResult, String> {
     dot::resolve_via_dot(&domain, &record_type, &dot_address).map_err(|e| e.message)
 }
 
+/// 测试 DoH 服务器连通性
 #[tauri::command(rename_all = "camelCase")]
 pub async fn test_doh_connectivity(doh_url: String) -> Result<f64, String> {
     doh::test_doh_connectivity(&doh_url).await.map_err(|e| e.message)
 }
 
+/// 测试 DoT 服务器连通性
 #[tauri::command(rename_all = "camelCase")]
 pub fn test_dot_connectivity(dot_address: String) -> Result<f64, String> {
     dot::test_dot_connectivity(&dot_address).map_err(|e| e.message)

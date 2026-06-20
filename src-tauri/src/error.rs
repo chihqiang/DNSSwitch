@@ -1,5 +1,11 @@
+// ============================================================
+// AppError — 统一错误类型
+// 实现 Serialize / Display / From，用于 Tauri 命令错误返回
+// ============================================================
+
 use serde::Serialize;
 
+/// 应用层错误，包含可序列化的错误消息
 #[derive(Debug, Serialize)]
 pub struct AppError {
     pub message: String,

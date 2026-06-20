@@ -1,3 +1,10 @@
+// ============================================================
+// DNS 定时调度引擎
+// 在后台线程中每 30 秒轮询一次，按优先级匹配调度规则
+// 支持 Time（时间段+星期）、Network（Wi-Fi SSID）、Cron（cron 表达式）、
+// Startup（启动时执行一次）、Always（始终匹配）五种条件类型
+// ============================================================
+
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -11,6 +18,7 @@ use super::system_dns;
 use crate::config;
 use crate::config::types::ScheduleCondition;
 
+/// 调度事件（推送到前端用于 Toast 通知）
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScheduleEvent {
@@ -21,8 +29,10 @@ pub struct ScheduleEvent {
     pub timestamp: u64,
 }
 
+/// 启动调度引擎后台线程
 pub fn spawn_schedule_engine(app_handle: tauri::AppHandle) {
     thread::spawn(move || {
+        // 启动时执行标记（确保 Startup 条件只触发一次）
         let startup_executed = AtomicBool::new(false);
         loop {
             if let Ok(config) = config::load_config() {
@@ -30,11 +40,14 @@ pub fn spawn_schedule_engine(app_handle: tauri::AppHandle) {
                     evaluate_rules(&app_handle, &config, &startup_executed);
                 }
             }
+            // 每 30 秒检查一次规则
             thread::sleep(Duration::from_secs(30));
         }
     });
 }
 
+/// 评估所有调度规则，按优先级从小到大排序后逐一匹配
+/// 匹配后切换到目标 DNS（如已设置则跳过），命中后停止继续匹配
 fn evaluate_rules(
     app_handle: &tauri::AppHandle,
     config: &config::types::AppConfig,
@@ -61,6 +74,7 @@ fn evaluate_rules(
             None => continue,
         };
 
+        // 如果目标 DNS 已经是当前 DNS，跳过
         let already_set = current_status
             .as_ref()
             .map(|s| {
@@ -79,6 +93,7 @@ fn evaluate_rules(
         let addresses: Vec<String> = target.addresses.clone();
         match system_dns::switch_to_dns(&target.id, &addresses) {
             Ok(()) => {
+                // 记录到历史
                 let _ = history::add_event(DnsEvent {
                     id: format!("sched-{}", now_millis()),
                     event_type: "schedule_switch".to_string(),
@@ -90,6 +105,7 @@ fn evaluate_rules(
                     timestamp: now_millis(),
                 });
 
+                // 发送调度事件到前端
                 let _ = app_handle.emit(
                     "schedule-event",
                     ScheduleEvent {
@@ -101,6 +117,7 @@ fn evaluate_rules(
                     },
                 );
 
+                // 发送系统通知
                 send_notification(
                     app_handle,
                     &format!("DNS Switched to {}", target.name),
@@ -121,10 +138,12 @@ fn evaluate_rules(
             }
         }
 
+        // 命中一条规则后即停止（已切换到目标 DNS）
         break;
     }
 }
 
+/// 检查调度条件是否匹配当前环境
 fn condition_matches(condition: &ScheduleCondition, startup_executed: &AtomicBool) -> bool {
     match condition {
         ScheduleCondition::Time {
@@ -146,12 +165,14 @@ fn condition_matches(condition: &ScheduleCondition, startup_executed: &AtomicBoo
             let end_minutes = end_parts[0].parse::<u32>().unwrap_or(0) * 60
                 + end_parts[1].parse::<u32>().unwrap_or(0);
 
+            // 支持跨天时间范围（如 22:00 - 06:00）
             let in_time_range = if start_minutes <= end_minutes {
                 current_minutes >= start_minutes && current_minutes < end_minutes
             } else {
                 current_minutes >= start_minutes || current_minutes < end_minutes
             };
 
+            // 星期几匹配（0=周一, 空数组表示每天）
             let weekday = now.weekday().num_days_from_monday();
             let day_matches = days_of_week.is_empty()
                 || days_of_week.contains(&weekday);
@@ -167,11 +188,13 @@ fn condition_matches(condition: &ScheduleCondition, startup_executed: &AtomicBoo
             }
         }
         ScheduleCondition::Cron { expression } => matches_cron(expression),
+        // Startup：仅在首次检查时为 true（CAS 从 false 设为 true）
         ScheduleCondition::Startup => !startup_executed.swap(true, Ordering::Relaxed),
         ScheduleCondition::Always => true,
     }
 }
 
+/// 简易 Cron 表达式匹配（5 字段：分 时 日 月 周）
 fn matches_cron(expression: &str) -> bool {
     let parts: Vec<&str> = expression.split_whitespace().collect();
     if parts.len() != 5 {
@@ -184,33 +207,40 @@ fn matches_cron(expression: &str) -> bool {
         (now.hour() as i32, parts[1]),
         (now.day() as i32, parts[2]),
         (now.month() as i32, parts[3]),
+        // chrono 的 Weekday::num_days_from_sunday: Sun=0, ..., Sat=6
         (now.weekday().num_days_from_sunday() as i32, parts[4]),
     ];
 
     fields.iter().all(|(value, pattern)| matches_field(*value, pattern))
 }
 
+/// 匹配单个 Cron 字段值
+/// 支持 *（通配）、*/n（每隔 n）、逗号分隔、范围（a-b）、精确值
 fn matches_field(value: i32, pattern: &str) -> bool {
     if pattern == "*" {
         return true;
     }
 
+    // 步进：*/n
     if let Some(rest) = pattern.strip_prefix("*/") {
         if let Ok(n) = rest.parse::<i32>() {
             return n > 0 && value % n == 0;
         }
     }
 
+    // 逗号分隔
     if pattern.contains(',') {
         return pattern.split(',').any(|p| matches_field(value, p));
     }
 
+    // 范围：a-b
     if let Some((start, end)) = pattern.split_once('-') {
         if let (Ok(s), Ok(e)) = (start.parse::<i32>(), end.parse::<i32>()) {
             return value >= s && value <= e;
         }
     }
 
+    // 精确值
     if let Ok(n) = pattern.parse::<i32>() {
         return value == n;
     }

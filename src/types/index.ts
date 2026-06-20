@@ -1,3 +1,7 @@
+// ============================================================
+// 类型定义统一导出入口
+// ============================================================
+
 export type { DnsServer, DnsProvider, DnsStatus, DnsQueryResult, DnsLatencyTest, DnsLeakResult, DnsEvent } from './dns';
 export { DnsProviderKey, DnsProviderInfo, DnsServerTag, PRESET_SERVERS } from './dns';
 

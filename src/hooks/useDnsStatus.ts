@@ -1,3 +1,8 @@
+// ============================================================
+// DNS 状态操作 Hook
+// 封装 DNS 切换、重置、延迟测试、泄露检测等核心操作
+// ============================================================
+
 import { useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import i18n from '@/i18n';
@@ -12,14 +17,19 @@ export function useDnsStatus() {
     isSwitching,
     error,
     lastLeakResult,
+    switchingServerId,
+    testingServerId,
     setCurrentStatus,
     setIsTesting,
     setIsSwitching,
     setError,
     setLastLeakResult,
+    setSwitchingServerId,
+    setTestingServerId,
   } = useDnsStore();
   const { servers } = useDnsServers();
 
+  /** 从系统获取当前 DNS 状态 */
   const fetchStatus = useCallback(async () => {
     try {
       const status = await invoke<DnsStatus>('get_current_dns');
@@ -30,6 +40,7 @@ export function useDnsStatus() {
     }
   }, [setCurrentStatus, setError]);
 
+  /** 切换到指定 DNS 服务器 */
   const switchDns = useCallback(
     async (serverId: string) => {
       const server = servers.find((s) => s.id === serverId);
@@ -39,15 +50,19 @@ export function useDnsStatus() {
       }
 
       setIsSwitching(true);
+      setSwitchingServerId(serverId);
       setError(null);
       setLastLeakResult(null);
       try {
+        // 调用 Rust 后端切换 DNS
         await invoke('switch_dns', {
           serverId: server.id,
           serverName: server.name,
           addresses: server.addresses,
         });
+        // 刷新状态
         await fetchStatus();
+        // 检测 DNS 泄露
         const leak = await invoke<DnsLeakResult>('check_dns_leak', {
           expectedAddresses: server.addresses,
         });
@@ -56,11 +71,13 @@ export function useDnsStatus() {
         setError(String(e));
       } finally {
         setIsSwitching(false);
+        setSwitchingServerId(null);
       }
     },
-    [servers, setIsSwitching, setError, fetchStatus, setLastLeakResult],
+    [servers, setIsSwitching, setSwitchingServerId, setError, fetchStatus, setLastLeakResult],
   );
 
+  /** 重置为系统默认 DNS */
   const resetToSystem = useCallback(async () => {
     setIsSwitching(true);
     setError(null);
@@ -75,6 +92,7 @@ export function useDnsStatus() {
     }
   }, [setIsSwitching, setError, setLastLeakResult, fetchStatus]);
 
+  /** 测试指定服务器的延迟 */
   const testLatency = useCallback(
     async (serverId: string) => {
       const server = servers.find((s) => s.id === serverId);
@@ -84,6 +102,7 @@ export function useDnsStatus() {
       }
 
       setIsTesting(true);
+      setTestingServerId(serverId);
       setError(null);
       try {
         const result = await invoke<DnsLatencyTest>('test_dns_latency', {
@@ -102,11 +121,13 @@ export function useDnsStatus() {
         return null;
       } finally {
         setIsTesting(false);
+        setTestingServerId(null);
       }
     },
-    [servers, setIsTesting, setError],
+    [servers, setIsTesting, setTestingServerId, setError],
   );
 
+  // 组件挂载时获取当前 DNS 状态
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
@@ -115,6 +136,8 @@ export function useDnsStatus() {
     currentStatus,
     isTesting,
     isSwitching,
+    switchingServerId,
+    testingServerId,
     error,
     lastLeakResult,
     fetchStatus,

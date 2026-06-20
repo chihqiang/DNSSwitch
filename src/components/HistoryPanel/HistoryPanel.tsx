@@ -1,3 +1,8 @@
+// ============================================================
+// HistoryPanel DNS 操作历史面板
+// 展示 DNS 切换/操作的历史记录，支持窗口聚焦时自动刷新
+// ============================================================
+
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +15,7 @@ export function HistoryPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  /** 从 Rust 后端加载历史记录 */
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -24,6 +30,7 @@ export function HistoryPanel() {
     }
   }, []);
 
+  // 挂载时加载，窗口聚焦时自动刷新
   useEffect(() => {
     load();
     const onFocus = () => load();
@@ -31,6 +38,7 @@ export function HistoryPanel() {
     return () => window.removeEventListener('focus', onFocus);
   }, [load]);
 
+  /** 清空历史记录 */
   const handleClear = async () => {
     await invoke('clear_history');
     setEvents([]);

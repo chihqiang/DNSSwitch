@@ -1,3 +1,8 @@
+// ============================================================
+// DnsServerList DNS 服务器列表组件
+// 渲染所有 DNS 服务器的卡片网格，处理切换/测试/编辑/删除操作
+// ============================================================
+
 import { useTranslation } from 'react-i18next';
 import { useDnsStatus, useDnsServers } from '@/hooks';
 import { DnsServerCard } from './DnsServerCard';
@@ -12,7 +17,7 @@ interface DnsServerListProps {
 
 export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
   const { t } = useTranslation();
-  const { isSwitching, isTesting, switchDns, testLatency } = useDnsStatus();
+  const { isSwitching, isTesting, switchingServerId, testingServerId, switchDns, testLatency } = useDnsStatus();
   const { servers, refreshLatency } = useDnsServers();
 
   async function handleSwitch(id: string) {
@@ -51,6 +56,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         />
       )}
 
+      {/* 响应式网格：自动填充，每列最小 280px */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
         {servers.map((server) => (
           <DnsServerCard
@@ -62,6 +68,8 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
             onDelete={onDelete}
             isSwitching={isSwitching}
             isTesting={isTesting}
+            switchingServerId={switchingServerId}
+            testingServerId={testingServerId}
           />
         ))}
       </div>

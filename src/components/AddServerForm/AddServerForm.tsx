@@ -1,3 +1,8 @@
+// ============================================================
+// AddServerForm 添加/编辑 DNS 服务器表单组件
+// 支持配置 IPv4/IPv6 地址、DoH URL、DoT 地址，以及延迟预测试
+// ============================================================
+
 import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +11,7 @@ import { DnsProviderKey, DnsProviderInfo } from '@/types';
 import { Button, ButtonVariant } from '@/components/common';
 import { inputClass, LABEL_CLASS, ERROR_CLASS } from '@/components/common/forms';
 
+/** 简易 IPv4/IPv6 地址格式校验 */
 function isValidIp(ip: string): boolean {
   const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/;
   if (ipv4.test(ip)) {
@@ -28,12 +34,14 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
   const { t } = useTranslation();
   const isEditing = !!editingServer;
 
+  // 表单状态
   const [name, setName] = useState(editingServer?.name ?? '');
   const [primaryAddr, setPrimaryAddr] = useState(editingServer?.addresses[0] ?? '');
   const [secondaryAddr, setSecondaryAddr] = useState(editingServer?.addresses[1] ?? '');
   const [dohUrl, setDohUrl] = useState(editingServer?.dohUrl ?? '');
   const [dotAddress, setDotAddress] = useState(editingServer?.dotAddress ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // 延迟预测试状态
   const [testResult, setTestResult] = useState<DnsLatencyTest | null>(null);
   const [isTesting, setIsTesting] = useState(false);
 
@@ -48,6 +56,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
   const hasDoh = dohUrl.trim().length > 0;
   const hasDot = dotAddress.trim().length > 0;
 
+  /** 表单校验 */
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = t('server.name_required');
@@ -62,6 +71,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     return Object.keys(errs).length === 0;
   }
 
+  /** 测试主地址的延迟 */
   const handleTest = useCallback(async () => {
     const addr = primaryAddr.trim();
     if (!addr || !isValidIp(addr)) return;
@@ -86,6 +96,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     }
   }, [primaryAddr]);
 
+  /** 提交表单 */
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
@@ -116,6 +127,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
 
   return (
     <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
+      {/* 服务器名称 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('server.name')}</label>
         <input
@@ -129,6 +141,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         {errors.name && <span className={ERROR_CLASS}>{errors.name}</span>}
       </div>
 
+      {/* 主 DNS 地址 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('server.address')}</label>
         <input
@@ -141,6 +154,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         {errors.address && <span className={ERROR_CLASS}>{errors.address}</span>}
       </div>
 
+      {/* 备用 DNS 地址 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('server.secondary_address')}</label>
         <input
@@ -153,6 +167,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         {errors.secondaryAddress && <span className={ERROR_CLASS}>{errors.secondaryAddress}</span>}
       </div>
 
+      {/* DoH URL */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>DoH URL</label>
         <input
@@ -165,6 +180,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         <span className="text-xs text-text-muted">{t('server.doh_hint')}</span>
       </div>
 
+      {/* DoT 地址 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>DoT Address</label>
         <input
@@ -177,6 +193,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         <span className="text-xs text-text-muted">{t('server.dot_hint')}</span>
       </div>
 
+      {/* 延迟预测试结果 */}
       {testResult && (
         <div
           className={`px-3 py-2 rounded text-xs ${testResult.success ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}
@@ -185,6 +202,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         </div>
       )}
 
+      {/* 按钮 */}
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onCancel}>
           {t('common.cancel')}

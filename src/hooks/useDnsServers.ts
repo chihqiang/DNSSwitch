@@ -1,3 +1,8 @@
+// ============================================================
+// DNS 服务器管理 Hook
+// 封装服务器的 CRUD 操作、延迟刷新、与配置同步等功能
+// ============================================================
+
 import { useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useDnsStore, useConfigStore } from '@/stores';
@@ -8,15 +13,19 @@ export function useDnsServers() {
   const { servers, setServers, addServer, removeServer, updateServer } = useDnsStore();
   const { config, isLoaded, setConfig } = useConfigStore();
 
+  // 使用 getState() 读取 config.servers，避免将 config.servers 放入 deps 导致循环依赖
   const loadServers = useCallback(() => {
     if (!isLoaded) return;
-    if (config.servers.length > 0) {
-      setServers(config.servers);
+    const { config: currentConfig } = useConfigStore.getState();
+    if (currentConfig.servers.length > 0) {
+      setServers(currentConfig.servers);
     } else {
+      // 首次使用：加载预设服务器列表
       setServers(PRESET_SERVERS);
     }
-  }, [config.servers, isLoaded, setServers]);
+  }, [isLoaded, setServers]);
 
+  /** 添加自定义 DNS 服务器，同时同步到 config store */
   const addCustomServer = useCallback(
     async (server: DnsServer) => {
       addServer(server);
@@ -28,6 +37,7 @@ export function useDnsServers() {
     [addServer, config, setConfig],
   );
 
+  /** 删除 DNS 服务器，同时同步到 config store */
   const deleteServer = useCallback(
     async (id: string) => {
       removeServer(id);
@@ -39,6 +49,7 @@ export function useDnsServers() {
     [removeServer, config, setConfig],
   );
 
+  /** 编辑 DNS 服务器，同时同步到 config store */
   const editServer = useCallback(
     async (id: string, updates: Partial<DnsServer>) => {
       updateServer(id, updates);
@@ -50,6 +61,7 @@ export function useDnsServers() {
     [updateServer, config, setConfig],
   );
 
+  /** 刷新所有服务器的延迟数据 */
   const refreshLatency = useCallback(async () => {
     const currentServers = useDnsStore.getState().servers;
     const results = await Promise.allSettled(
@@ -73,10 +85,12 @@ export function useDnsServers() {
     }
   }, []);
 
+  // 配置加载完成后，同步服务器列表
   useEffect(() => {
     loadServers();
   }, [loadServers]);
 
+  // 按配置的间隔定时刷新延迟
   useEffect(() => {
     if (!isLoaded || !config.settings.latencyCheckInterval) return;
     const id = setInterval(refreshLatency, config.settings.latencyCheckInterval);

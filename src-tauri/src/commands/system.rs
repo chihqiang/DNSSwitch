@@ -1,5 +1,11 @@
+// ============================================================
+// 系统信息相关 Tauri 命令
+// 提供系统信息查询和网络服务列表获取
+// ============================================================
+
 use serde::Serialize;
 
+/// macOS 系统命令常量
 const CMD_NETWORKSETUP: &str = "networksetup";
 const CMD_HOSTNAME: &str = "hostname";
 const CMD_SW_VERS: &str = "sw_vers";
@@ -8,11 +14,14 @@ const ARG_LIST_ALL_SERVICES: &str = "-listallnetworkservices";
 const ARG_GET_DNS_SERVERS: &str = "-getdnsservers";
 const ARG_PRODUCT_VERSION: &str = "-productVersion";
 const ARG_KERNEL_RELEASE: &str = "-r";
+
+/// 输出过滤关键字
 const FILTER_STAR: &str = "*";
 const FILTER_EMPTY: &str = "empty";
 const FILTER_NO_DNS: &str = "there aren't";
 const UNKNOWN: &str = "unknown";
 
+/// 系统信息（OS、版本、主机名、内核）
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemInfo {
@@ -22,6 +31,7 @@ pub struct SystemInfo {
     pub kernel_version: String,
 }
 
+/// 网络服务信息（如 Wi-Fi、以太网）
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkService {
@@ -31,6 +41,7 @@ pub struct NetworkService {
     pub dns_servers: Vec<String>,
 }
 
+/// 获取系统基本信息
 #[tauri::command]
 pub fn get_system_info() -> Result<SystemInfo, String> {
     let os = std::env::consts::OS.to_string();
@@ -46,6 +57,7 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     })
 }
 
+/// 获取所有网络服务及其 DNS 配置
 #[tauri::command]
 pub fn get_network_services() -> Result<Vec<NetworkService>, String> {
     let output = std::process::Command::new(CMD_NETWORKSETUP)
@@ -97,6 +109,7 @@ fn get_kernel_version() -> String {
     }
 }
 
+/// 获取指定网络服务配置的 DNS 服务器地址列表
 fn get_service_dns(service_name: &str) -> Vec<String> {
     let output = std::process::Command::new(CMD_NETWORKSETUP)
         .arg(ARG_GET_DNS_SERVERS)

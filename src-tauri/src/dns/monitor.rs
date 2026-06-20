@@ -1,3 +1,9 @@
+// ============================================================
+// DNS 健康监控模块
+// 在独立线程中周期性检测当前 DNS 的可达性、延迟和泄露状态
+// 通过 Tauri 事件 "dns-health-changed" 推送结果到前端
+// ============================================================
+
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -8,8 +14,10 @@ use super::resolver::{measure_latency, resolve_domain};
 use super::system_dns::get_current_dns_status;
 use crate::config;
 
+/// 用于健康检查的测试域名
 const TEST_DOMAIN: &str = "one.one.one.one";
 
+/// DNS 健康状态事件（推送到前端）
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DnsHealthEvent {
@@ -23,15 +31,19 @@ pub struct DnsHealthEvent {
     pub timestamp: u64,
 }
 
+/// 启动 DNS 健康监控后台线程
+/// 根据配置的检查间隔周期性执行检测，将健康事件推送到前端
 pub fn spawn_monitor(app_handle: tauri::AppHandle) {
     thread::spawn(move || loop {
         if let Ok(config) = config::load_config() {
+            // 最小间隔 5 秒，防止过于频繁
             let interval = config.settings.latency_check_interval.max(5000);
 
             let event = match config.servers.iter().find(|s| s.is_active) {
                 Some(server) => {
                     let addr = server.addresses.first().cloned().unwrap_or_default();
                     if addr.is_empty() {
+                        // 服务器没有配置地址
                         DnsHealthEvent {
                             healthy: true,
                             latency_ms: 0.0,
@@ -52,6 +64,7 @@ pub fn spawn_monitor(app_handle: tauri::AppHandle) {
                         let leak = !actual.is_empty() && !actual.contains(&addr);
 
                         match (&latency, &resolved) {
+                            // DNS 可达且解析正常
                             (Ok(lat), Ok(_)) => DnsHealthEvent {
                                 healthy: true,
                                 latency_ms: *lat,
@@ -87,6 +100,7 @@ pub fn spawn_monitor(app_handle: tauri::AppHandle) {
                         }
                     }
                 }
+                // 没有激活的自定义 DNS 服务器时，检测系统 DNS
                 None => {
                     let status = get_current_dns_status().ok();
                     match status.and_then(|s| s.current_servers.into_iter().next()) {
@@ -129,9 +143,11 @@ pub fn spawn_monitor(app_handle: tauri::AppHandle) {
                 }
             };
 
+            // 通过 Tauri 事件系统推送健康状态到前端
             let _ = app_handle.emit("dns-health-changed", event);
             thread::sleep(Duration::from_millis(interval));
         } else {
+            // 配置加载失败，等待 30 秒后重试
             thread::sleep(Duration::from_secs(30));
         }
     });

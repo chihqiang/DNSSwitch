@@ -1,8 +1,13 @@
+// ============================================================
+// ServersPage DNS 服务器管理页面
+// 展示服务器列表，支持添加/编辑/删除操作
+// ============================================================
+
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DnsServerList } from '@/components/DnsServerList';
 import { AddServerForm } from '@/components/AddServerForm';
-import { Modal, Button, ButtonVariant, ErrorBoundary } from '@/components/common';
+import { Modal, ConfirmDialog, ErrorBoundary } from '@/components/common';
 import { useDnsServers } from '@/hooks';
 import type { DnsServer } from '@/types';
 
@@ -10,19 +15,19 @@ export function ServersPage() {
   const { t } = useTranslation();
   const [editingServer, setEditingServer] = useState<DnsServer | null>(null);
   const [showAddServer, setShowAddServer] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  // 删除确认状态
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const { addCustomServer, editServer, deleteServer } = useDnsServers();
 
+  /** 编辑服务器 */
   const handleEdit = (server: DnsServer) => {
     setEditingServer(server);
     setShowAddServer(true);
   };
 
+  /** 确认删除服务器 */
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -37,6 +42,7 @@ export function ServersPage() {
     }
   };
 
+  /** 表单提交（新增或编辑） */
   const handleFormSubmit = useCallback(
     async (server: DnsServer) => {
       try {
@@ -54,7 +60,7 @@ export function ServersPage() {
         setShowAddServer(false);
         setEditingServer(null);
       } catch {
-        // error handled by store
+        // 错误由 store 处理
       }
     },
     [editingServer, addCustomServer, editServer],
@@ -73,6 +79,7 @@ export function ServersPage() {
         onDelete={(id, name) => setDeleteTarget({ id, name })}
       />
 
+      {/* 添加/编辑服务器弹窗 */}
       <Modal
         isOpen={showAddServer}
         onClose={closeForm}
@@ -81,22 +88,19 @@ export function ServersPage() {
         <AddServerForm editingServer={editingServer} onSubmit={handleFormSubmit} onCancel={closeForm} />
       </Modal>
 
-      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('common.confirm')}>
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-text-secondary">
-            {deleteTarget && t('common.confirm_delete', { name: deleteTarget.name })}
-          </p>
-          {deleteError && <p className="text-xs text-danger">{deleteError}</p>}
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <Button variant={ButtonVariant.SECONDARY} onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant={ButtonVariant.DANGER} onClick={handleDeleteConfirm} isLoading={isDeleting}>
-              {t('common.delete')}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* 删除确认弹窗 */}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        title={t('common.confirm')}
+        message={deleteTarget ? t('common.confirm_delete', { name: deleteTarget.name }) : ''}
+        onConfirm={handleDeleteConfirm}
+        isLoading={isDeleting}
+        error={deleteError}
+      />
     </ErrorBoundary>
   );
 }

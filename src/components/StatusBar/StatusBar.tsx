@@ -1,3 +1,8 @@
+// ============================================================
+// StatusBar 底部状态栏组件
+// 显示当前 DNS 状态、健康指示灯、延迟、泄露检测结果等
+// ============================================================
+
 import { useTranslation } from 'react-i18next';
 import { useDnsStatus, useDnsServers } from '@/hooks';
 import { Badge, BadgeVariant } from '@/components/common';
@@ -15,6 +20,7 @@ export function StatusBar() {
 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-bg-secondary border-t border-border text-xs text-text-muted gap-4">
+      {/* 左侧：状态指示灯 + 当前 DNS 信息 */}
       <div className="flex items-center gap-2 min-w-0">
         <span
           className={`w-2 h-2 rounded-full shrink-0 ${
@@ -32,6 +38,8 @@ export function StatusBar() {
           <span className="text-danger truncate ml-2">{healthStatus.error}</span>
         )}
       </div>
+
+      {/* 右侧：状态标签 */}
       <div className="flex items-center gap-2 shrink-0">
         {healthStatus && (
           <Badge variant={healthStatus.healthy ? BadgeVariant.SUCCESS : BadgeVariant.DANGER}>
@@ -44,8 +52,10 @@ export function StatusBar() {
           </Badge>
         )}
         {currentStatus?.isCustom && <Badge variant={BadgeVariant.INFO}>{t('status.custom_dns')}</Badge>}
-        {lastLeakResult?.leakDetected && <Badge variant={BadgeVariant.DANGER}>{t('status.leak_detected')}</Badge>}
-        {healthStatus?.leakDetected && <Badge variant={BadgeVariant.DANGER}>{t('status.leak_detected')}</Badge>}
+        {/* 合并 lastLeakResult 和 healthStatus 的泄露检测（避免重复显示） */}
+        {(lastLeakResult?.leakDetected || healthStatus?.leakDetected) && (
+          <Badge variant={BadgeVariant.DANGER}>{t('status.leak_detected')}</Badge>
+        )}
       </div>
     </div>
   );

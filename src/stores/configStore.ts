@@ -1,11 +1,20 @@
+// ============================================================
+// 应用配置状态管理 Store（Zustand）
+// 管理应用配置的读写、调度规则的增删改、用户设置等
+// ============================================================
+
 import { create } from 'zustand';
 import type { AppConfig, ScheduleRule } from '@/types';
 import { DEFAULT_CONFIG } from '@/types';
 
 interface ConfigState {
+  /** 当前应用配置 */
   config: AppConfig;
+  /** 配置是否已从后端加载 */
   isLoaded: boolean;
+  /** 是否正在保存配置 */
   isSaving: boolean;
+  /** 错误信息 */
   error: string | null;
 
   setConfig: (config: AppConfig) => void;
@@ -13,11 +22,13 @@ interface ConfigState {
   setIsLoaded: (v: boolean) => void;
   setIsSaving: (v: boolean) => void;
   setError: (error: string | null) => void;
+  /** 调度规则操作 */
   addScheduleRule: (rule: ScheduleRule) => void;
   removeScheduleRule: (id: string) => void;
   updateScheduleRule: (id: string, updates: Partial<ScheduleRule>) => void;
   reorderScheduleRules: (rules: ScheduleRule[]) => void;
   setScheduleEnabled: (enabled: boolean) => void;
+  /** 设置操作 */
   updateSettings: (updates: Partial<AppConfig['settings']>) => void;
   updateTheme: (mode: AppConfig['theme']['mode']) => void;
 }
@@ -35,6 +46,8 @@ export const useConfigStore = create<ConfigState>((set) => ({
   setIsLoaded: (v) => set({ isLoaded: v }),
   setIsSaving: (v) => set({ isSaving: v }),
   setError: (error) => set({ error }),
+
+  // ---- 调度规则 ----
 
   addScheduleRule: (rule) =>
     set((state) => ({
@@ -84,6 +97,8 @@ export const useConfigStore = create<ConfigState>((set) => ({
         schedule: { ...state.config.schedule, enabled },
       },
     })),
+
+  // ---- 设置 ----
 
   updateSettings: (updates) =>
     set((state) => ({

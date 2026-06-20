@@ -1,3 +1,8 @@
+// ============================================================
+// ScheduleRule 调度规则卡片组件
+// 展示单条调度规则的详情及操作按钮
+// ============================================================
+
 import { useTranslation } from 'react-i18next';
 import type { ScheduleRule as ScheduleRuleType } from '@/types';
 import { ScheduleConditionType as CondType } from '@/types';
@@ -13,6 +18,7 @@ interface ScheduleRuleProps {
 export function ScheduleRule({ rule, onToggle, onEdit, onDelete }: ScheduleRuleProps) {
   const { t } = useTranslation();
 
+  /** 根据条件类型生成人类可读的条件描述 */
   const conditionLabel = () => {
     switch (rule.condition.type) {
       case CondType.TIME:
@@ -33,6 +39,7 @@ export function ScheduleRule({ rule, onToggle, onEdit, onDelete }: ScheduleRuleP
     }
   };
 
+  /** 条件类型的简短标签 */
   const typeLabel = () => {
     switch (rule.condition.type) {
       case CondType.TIME:
@@ -50,6 +57,7 @@ export function ScheduleRule({ rule, onToggle, onEdit, onDelete }: ScheduleRuleP
 
   return (
     <Card className={`flex flex-col gap-3 p-3 ${!rule.enabled ? 'opacity-60' : ''}`}>
+      {/* 头部：规则名称 + 类型标签 + 开关 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h4 className="text-sm font-semibold">{rule.name}</h4>
@@ -57,6 +65,7 @@ export function ScheduleRule({ rule, onToggle, onEdit, onDelete }: ScheduleRuleP
             <Badge variant={BadgeVariant.INFO}>{typeLabel()}</Badge>
           </span>
         </div>
+        {/* 启用/禁用开关 */}
         <label className="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" className="sr-only" checked={rule.enabled} onChange={() => onToggle(rule.id)} />
           <span
@@ -69,11 +78,13 @@ export function ScheduleRule({ rule, onToggle, onEdit, onDelete }: ScheduleRuleP
         </label>
       </div>
 
+      {/* 条件描述 */}
       <div className="text-sm text-text-secondary">
         <p className="m-0">{conditionLabel()}</p>
         {rule.description && <p className="mt-1 text-xs text-text-muted">{rule.description}</p>}
       </div>
 
+      {/* 操作按钮 */}
       <div className="flex gap-1.5 pt-3 border-t border-border">
         <Button variant={ButtonVariant.GHOST} size="sm" onClick={() => onEdit(rule)}>
           {t('common.edit')}

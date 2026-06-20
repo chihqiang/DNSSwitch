@@ -1,3 +1,8 @@
+// ============================================================
+// SchedulePanel 调度面板组件
+// 展示调度总开关、规则列表，支持添加/编辑/删除规则
+// ============================================================
+
 import { useTranslation } from 'react-i18next';
 import type { ScheduleRule as ScheduleRuleType } from '@/types';
 import { useConfigStore } from '@/stores';
@@ -15,6 +20,7 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
   const { config, setScheduleEnabled } = useConfigStore();
   const { rules, enabled } = config.schedule;
 
+  /** 切换单条规则的启用/禁用状态 */
   function handleToggle(id: string) {
     const rule = rules.find((r) => r.id === id);
     if (rule) {
@@ -24,9 +30,11 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
 
   return (
     <Card className="flex flex-col gap-3 p-3">
+      {/* 头部：标题 + 总开关 + 添加按钮 */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{t('schedule.title')}</h2>
         <div className="flex items-center gap-3">
+          {/* 调度总开关（自定义 toggle） */}
           <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
@@ -48,12 +56,15 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
         </div>
       </div>
 
+      {/* 禁用提示 */}
       {!enabled && <p className="text-sm text-text-muted text-center py-6">{t('schedule.disabled_hint')}</p>}
 
+      {/* 空状态提示 */}
       {enabled && rules.length === 0 && (
         <p className="text-sm text-text-muted text-center py-6">{t('schedule.empty_hint')}</p>
       )}
 
+      {/* 规则列表 */}
       {enabled && rules.length > 0 && (
         <div className="flex flex-col gap-2">
           {rules.map((rule) => (

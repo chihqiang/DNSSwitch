@@ -1,3 +1,8 @@
+// ============================================================
+// ESLint 配置（Flat Config 格式）
+// TypeScript + React + React Hooks + React Refresh + Prettier
+// ============================================================
+
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactPlugin from "eslint-plugin-react";

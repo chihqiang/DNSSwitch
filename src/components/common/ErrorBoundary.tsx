@@ -1,3 +1,8 @@
+// ============================================================
+// ErrorBoundary 错误边界组件（Class 组件，React 要求）
+// 捕获子组件树中的渲染错误，显示友好的错误提示
+// ============================================================
+
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 
 interface Props {

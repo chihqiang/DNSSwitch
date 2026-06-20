@@ -1,3 +1,8 @@
+// ============================================================
+// Modal 模态框组件
+// 支持 ESC 关闭、点击遮罩关闭、aria 无障碍属性
+// ============================================================
+
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +19,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const { t } = useTranslation();
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  // 注册/注销 ESC 按键监听
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
       if (e.key === KEY_ESCAPE) onClose();
@@ -31,6 +37,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       ref={overlayRef}
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-[fadeIn_0.15s_ease-out]"
       onClick={(e) => {
+        // 点击遮罩（而非内容区）关闭
         if (e.target === overlayRef.current) onClose();
       }}
     >

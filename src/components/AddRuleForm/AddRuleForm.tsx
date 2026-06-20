@@ -1,3 +1,8 @@
+// ============================================================
+// AddRuleForm 调度规则表单组件
+// 支持添加/编辑调度规则，含时间、网络、Cron、启动、始终五种条件类型
+// ============================================================
+
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScheduleRule } from '@/types';
@@ -13,6 +18,7 @@ import {
   ERROR_CLASS,
 } from '@/components/common/forms';
 
+/** 星期几列表 */
 const DAYS = [0, 1, 2, 3, 4, 5, 6];
 const DAY_KEYS = [
   'schedule.day_sun',
@@ -24,6 +30,7 @@ const DAY_KEYS = [
   'schedule.day_sat',
 ];
 
+/** 下拉选择框样式 */
 const SELECT_CLASS = `${INPUT_CLASS_DEFAULT} bg-bg-card text-text-primary text-sm px-3 py-2 border rounded outline-none cursor-pointer`;
 
 interface AddRuleFormProps {
@@ -37,6 +44,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
   const servers = useDnsStore((s) => s.servers);
   const isEditing = !!editingRule;
 
+  // 表单状态
   const [name, setName] = useState(editingRule?.name ?? '');
   const [condType, setCondType] = useState(editingRule?.condition.type ?? ScheduleConditionType.ALWAYS);
   const [startTime, setStartTime] = useState(
@@ -64,10 +72,12 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
   const [description, setDescription] = useState(editingRule?.description ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  /** 切换某一天的选中状态 */
   function toggleDay(day: number) {
     setDaysOfWeek((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
 
+  /** 表单校验 */
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = t('schedule.name_required');
@@ -79,6 +89,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
     return Object.keys(errs).length === 0;
   }
 
+  /** 提交表单 */
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
@@ -122,6 +133,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
     onSubmit(rule);
   }
 
+  /** 条件类型选项 */
   const conditionOptions = [
     { value: ScheduleConditionType.ALWAYS, label: t('schedule.type_always') },
     { value: ScheduleConditionType.TIME, label: t('schedule.type_time') },
@@ -132,6 +144,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
 
   return (
     <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
+      {/* 规则名称 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('schedule.rule_name')}</label>
         <input
@@ -145,6 +158,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         {errors.name && <span className={ERROR_CLASS}>{errors.name}</span>}
       </div>
 
+      {/* 条件类型 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('schedule.condition_type')}</label>
         <select
@@ -162,26 +176,17 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         </select>
       </div>
 
+      {/* 时间段条件 */}
       {condType === ScheduleConditionType.TIME && (
         <>
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
               <label className={LABEL_CLASS}>{t('schedule.start_time')}</label>
-              <input
-                className={inputClass()}
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
+              <input className={inputClass()} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1 flex-1">
               <label className={LABEL_CLASS}>{t('schedule.end_time')}</label>
-              <input
-                className={inputClass()}
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
+              <input className={inputClass()} type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </div>
           </div>
           {errors.time && <span className={ERROR_CLASS}>{errors.time}</span>}
@@ -208,6 +213,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         </>
       )}
 
+      {/* 网络条件 */}
       {condType === ScheduleConditionType.NETWORK && (
         <>
           <div className="flex flex-col gap-1">
@@ -233,6 +239,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         </>
       )}
 
+      {/* Cron 条件 */}
       {condType === ScheduleConditionType.CRON && (
         <div className="flex flex-col gap-1">
           <label className={LABEL_CLASS}>Cron Expression</label>
@@ -247,6 +254,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         </div>
       )}
 
+      {/* 目标服务器 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('schedule.target_server')}</label>
         {servers.length === 0 ? (
@@ -267,6 +275,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         {errors.server && <span className={ERROR_CLASS}>{errors.server}</span>}
       </div>
 
+      {/* 优先级 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('schedule.priority')}</label>
         <input
@@ -279,6 +288,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         />
       </div>
 
+      {/* 描述 */}
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('schedule.description')}</label>
         <textarea
@@ -290,6 +300,7 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
         />
       </div>
 
+      {/* 按钮 */}
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onCancel}>
           {t('common.cancel')}
