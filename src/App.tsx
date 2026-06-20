@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useCallback } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
 import { Layout } from '@/components/Layout/Layout'
@@ -10,12 +10,15 @@ import { LogPage } from '@/pages/LogPage'
 import { StatusBar } from '@/components/StatusBar'
 import { ErrorBoundary, LoadingSpinner } from '@/components/common'
 import { useConfig } from '@/hooks'
-import { useDnsStore } from '@/stores'
-import type { DnsHealthEvent } from '@/types'
+import { useDnsStore, useScheduleStore } from '@/stores'
+import type { DnsHealthEvent, ScheduleEventPayload } from '@/types'
 
 function AppContent() {
   const { loadConfig } = useConfig()
   const setHealthStatus = useDnsStore((s) => s.setHealthStatus)
+  const showToast = useScheduleStore((s) => s.showToast)
+  const toast = useScheduleStore((s) => s.toast)
+  const clearToast = useScheduleStore((s) => s.clearToast)
 
   useEffect(() => {
     loadConfig()
@@ -27,6 +30,17 @@ function AppContent() {
     })
     return () => { unlisten.then((fn) => fn()) }
   }, [setHealthStatus])
+
+  useEffect(() => {
+    const unlisten = listen<ScheduleEventPayload>('schedule-event', (event) => {
+      showToast(event.payload)
+    })
+    return () => { unlisten.then((fn) => fn()) }
+  }, [showToast])
+
+  const handleToastClick = useCallback(() => {
+    clearToast()
+  }, [clearToast])
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -41,6 +55,16 @@ function AppContent() {
         </Route>
       </Routes>
       <StatusBar />
+      {toast && (
+        <div
+          className={`fixed bottom-16 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg text-white text-sm cursor-pointer select-none animate-fadeIn ${
+            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}
+          onClick={handleToastClick}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }

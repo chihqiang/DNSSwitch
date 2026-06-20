@@ -74,7 +74,7 @@ fn send_notification(_app_handle: &tauri::AppHandle, title: &str, body: &str) {
 }
 
 #[tauri::command]
-pub fn reset_system_dns() -> Result<(), String> {
+pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
     match system_dns::reset_to_system_dns() {
         Ok(()) => {
             let _ = history::add_event(DnsEvent {
@@ -87,6 +87,7 @@ pub fn reset_system_dns() -> Result<(), String> {
                 detail: None,
                 timestamp: now_millis(),
             });
+            send_notification(&app_handle, "DNS Reset", "Reset to system default DNS");
             Ok(())
         }
         Err(e) => {

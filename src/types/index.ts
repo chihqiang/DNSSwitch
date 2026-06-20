@@ -44,4 +44,9 @@ export type {
 export type {
   DnsHealthEvent,
 } from './health'
+
+export type {
+  ScheduleEventPayload,
+} from './scheduleEvent'
+
 export { NetworkInterfaceType } from './system'
