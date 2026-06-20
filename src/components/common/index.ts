@@ -13,3 +13,4 @@ export { ConfirmDialog } from './ConfirmDialog';
 export { ErrorBoundary } from './ErrorBoundary';
 export { LoadingSpinner } from './LoadingSpinner';
 export { EmptyState } from './EmptyState';
+export { ToastContainer } from './Toast';

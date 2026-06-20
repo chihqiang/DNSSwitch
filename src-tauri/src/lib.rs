@@ -143,6 +143,10 @@ pub fn run() {
             dns::provider::update_server_in_registry,
             dns::provider::delete_server_from_registry,
             dns::provider::reset_provider_registry,
+            commands::dns::get_chrome_doh_status,
+            commands::dns::set_chrome_doh,
+            commands::dns::reset_chrome_doh,
+            commands::dns::is_chrome_installed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -213,6 +217,7 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
                         server.id.clone(),
                         server.name.clone(),
                         server.addresses.clone(),
+                        server.doh_url.clone(),
                     ) {
                         log::error!("[tray] Failed to switch DNS: {}", e);
                     }
@@ -247,7 +252,7 @@ fn build_tray_menu(
         .and_then(|c| c.servers.iter().find(|s| s.is_active));
     let dns_label = match current_server {
         Some(s) => format!("DNS: {} ({})", s.name, s.addresses.first().unwrap_or(&"?".to_string())),
-        None => "DNS: System Default".to_string(),
+        None => "DNS: Default".to_string(),
     };
     let dns_status = MenuItemBuilder::with_id("dns_status", &dns_label)
         .enabled(false)
@@ -259,7 +264,7 @@ fn build_tray_menu(
     let sep4 = PredefinedMenuItem::separator(app)?;
 
     // 底部操作
-    let reset = MenuItemBuilder::with_id("reset_dns", "Reset to System DNS").build(app)?;
+    let reset = MenuItemBuilder::with_id("reset_dns", "Reset Default DNS").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
     // 动态生成 DNS 服务器切换菜单项

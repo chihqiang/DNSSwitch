@@ -21,6 +21,7 @@ export default {
     confirm_delete: 'Are you sure you want to delete "{{name}}"?',
     confirm: 'Confirm',
     custom: 'Custom',
+    switch_chrome: 'Switch via Chrome',
   },
   status: {
     healthy: 'Healthy',
@@ -31,6 +32,9 @@ export default {
     quick_switch: 'Quick Switch',
     error_hint: 'Error: {{message}}',
     leak_detected: 'DNS Leak!',
+    switch_success: 'Switched to {{name}}',
+    reset_success: 'DNS reset to system default',
+    cancelled: 'Cancelled',
   },
   tab: {
     servers: 'Servers',
@@ -41,7 +45,7 @@ export default {
   server: {
     title: 'DNS Servers',
     refresh_latency: 'Refresh Latency',
-    reset_system: 'Reset System DNS',
+    reset_system: 'Reset Default DNS',
     add_server: 'Add Server',
     add_title: 'Add DNS Server',
     edit_title: 'Edit DNS Server',
@@ -61,8 +65,9 @@ export default {
     no_addresses: 'No addresses to test',
     empty_title: 'No DNS Servers',
     empty_desc: 'Add a custom DNS server or use the preset list above.',
-    no_ip_hint: 'No IP configured, cannot switch system DNS',
-    no_ip_form_hint: 'System DNS switching requires IP addresses. DoH/DoT are for queries only. Servers without IPs cannot be set as system DNS.',
+    no_ip_hint: 'No IP or DoH URL configured',
+    no_ip_form_hint: 'Servers without IP addresses will use Chrome DNS-over-HTTPS. If Chrome is not installed, only queries will work.',
+    no_dns_config: 'No DNS configuration available',
     doh_hint: 'Optional DNS-over-HTTPS endpoint URL',
     dot_hint: 'Optional DNS-over-TLS server address (port 853)',
   },

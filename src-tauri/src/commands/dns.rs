@@ -41,61 +41,99 @@ pub fn switch_dns(
     server_id: String,
     server_name: String,
     addresses: Vec<String>,
+    doh_url: Option<String>,
 ) -> Result<(), String> {
-    switch_dns_inner(&app_handle, server_id, server_name, addresses)
+    switch_dns_inner(&app_handle, server_id, server_name, addresses, doh_url)
 }
 
 /// DNS 切换内部实现（供托盘菜单等内部调用）
-/// 执行系统 DNS 切换后记录历史事件、发送通知、重建托盘菜单
+/// - 有 IP 地址 → 系统 DNS 切换
+/// - 有 DoH URL → 同时设置 Chrome DoH（Chrome 未安装时仅警告，不影响系统 DNS 切换）
 pub fn switch_dns_inner(
     app_handle: &tauri::AppHandle,
     server_id: String,
     server_name: String,
     addresses: Vec<String>,
+    doh_url: Option<String>,
 ) -> Result<(), String> {
-    match system_dns::switch_to_dns(&server_id, &addresses) {
-        Ok(()) => {
-            log::info!("[dns] Switched to {} ({})", server_name, addresses.join(", "));
-            // 持久化活跃服务器 ID
-            if let Ok(mut config) = crate::config::load_config() {
-                config.active_server_id = Some(server_id.clone());
-                let _ = crate::config::save_config(&config);
+    let addrs: Vec<&str> = addresses.iter().map(|a| a.trim()).filter(|a| !a.is_empty()).collect();
+    let doh = doh_url.as_deref().filter(|u| !u.is_empty());
+
+    if addrs.is_empty() && doh.is_none() {
+        return Err("No DNS addresses or DoH URL provided".to_string());
+    }
+
+    let mut errors: Vec<String> = Vec::new();
+
+    // 系统 DNS 切换
+    if !addrs.is_empty() {
+        match system_dns::switch_to_dns(&server_id, &addresses) {
+            Ok(()) => log::info!("[dns] Switched system DNS to {} ({})", server_name, addresses.join(", ")),
+            Err(e) => {
+                log::error!("[dns] Failed to switch system DNS to {}: {}", server_name, e.message);
+                errors.push(e.message);
             }
-            // 异步记录历史事件（延迟测试可能阻塞 5s，不阻塞切换流程）
-            let hist_name = server_name.clone();
-            let hist_addrs = addresses.clone();
-            let addr = addresses.first().cloned();
-            std::thread::spawn(move || {
-                let latency = addr.and_then(|a| resolver::measure_latency(&a).ok());
-                let _ = history::add_event(DnsEvent {
-                    id: new_id(),
-                    event_type: "switch".to_string(),
-                    server_name: hist_name,
-                    addresses: hist_addrs,
-                    latency_ms: latency,
-                    success: true,
-                    detail: None,
-                    timestamp: now_millis(),
-                });
-            });
-            send_notification(app_handle, "DNS Switched", &format!("Switched to {}", server_name));
-            let _ = crate::rebuild_tray_menu(app_handle);
-            Ok(())
         }
-        Err(e) => {
-            log::error!("[dns] Failed to switch to {}: {}", server_name, e.message);
+    }
+
+    // Chrome DoH（只要 doh URL 不为空就设置）
+    if let Some(url) = doh {
+        if crate::dns::chrome_dns::is_chrome_installed() {
+            match crate::dns::chrome_dns::set_chrome_doh(url) {
+                Ok(()) => log::info!("[dns] Set Chrome DoH to {} ({})", server_name, url),
+                Err(e) => {
+                    log::error!("[dns] Failed to set Chrome DoH: {}", e.message);
+                    errors.push(e.message);
+                }
+            }
+        } else if addrs.is_empty() {
+            // 纯 DoH 服务器但 Chrome 未安装 → 硬错误
+            return Err("Chrome is required for DoH-only DNS servers, but Chrome is not installed".to_string());
+        } else {
+            log::warn!("[dns] Chrome not installed, skipping DoH for {}", server_name);
+        }
+    }
+
+    // 判断结果
+    if errors.is_empty() || (!addrs.is_empty() && errors.len() == 1) {
+        // 全部成功，或仅 Chrome DoH 失败（系统 DNS 成功了）
+        if let Ok(mut config) = crate::config::load_config() {
+            config.active_server_id = Some(server_id.clone());
+            let _ = crate::config::save_config(&config);
+        }
+        let hist_name = server_name.clone();
+        let hist_addrs = addresses.clone();
+        let addr = addresses.first().cloned();
+        std::thread::spawn(move || {
+            let latency = addr.and_then(|a| resolver::measure_latency(&a).ok());
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
                 event_type: "switch".to_string(),
-                server_name,
-                addresses,
-                latency_ms: None,
-                success: false,
-                detail: Some(e.message.clone()),
+                server_name: hist_name,
+                addresses: hist_addrs,
+                latency_ms: latency,
+                success: true,
+                detail: None,
                 timestamp: now_millis(),
             });
-            Err(e.message)
-        }
+        });
+        send_notification(app_handle, "DNS Switched", &format!("Switched to {}", server_name));
+        let _ = crate::rebuild_tray_menu(app_handle);
+        Ok(())
+    } else {
+        // 系统 DNS 失败（或纯 DoH 模式 Chrome 失败）
+        let msg = errors.join("; ");
+        let _ = history::add_event(DnsEvent {
+            id: new_id(),
+            event_type: "switch".to_string(),
+            server_name,
+            addresses,
+            latency_ms: None,
+            success: false,
+            detail: Some(msg.clone()),
+            timestamp: now_millis(),
+        });
+        Err(msg)
     }
 }
 
@@ -117,42 +155,55 @@ pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
 
 /// 重置 DNS 为系统默认（内部实现，供托盘菜单调用）
 pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), String> {
-    match system_dns::reset_to_system_dns() {
-        Ok(()) => {
-            log::info!("[dns] Reset to system DNS");
-            // 清除持久化的活跃服务器 ID
-            if let Ok(mut config) = crate::config::load_config() {
-                config.active_server_id = None;
-                let _ = crate::config::save_config(&config);
-            }
-            let _ = history::add_event(DnsEvent {
-                id: new_id(),
-                event_type: "reset".to_string(),
-                server_name: "System DNS".to_string(),
-                addresses: Vec::new(),
-                latency_ms: None,
-                success: true,
-                detail: None,
-                timestamp: now_millis(),
-            });
-            send_notification(app_handle, "DNS Reset", "Reset to system default DNS");
-            let _ = crate::rebuild_tray_menu(app_handle);
-            Ok(())
+    // 同时清除系统 DNS 和 Chrome DoH
+    let mut success = true;
+    let mut error_msg = String::new();
+
+    if let Err(e) = system_dns::reset_to_system_dns() {
+        if e.message == "CANCELLED" {
+            log::info!("[dns] DNS reset cancelled by user");
+        } else {
+            log::error!("[dns] Failed to reset system DNS: {}", e.message);
         }
-        Err(e) => {
-            log::error!("[dns] Failed to reset DNS: {}", e.message);
-            let _ = history::add_event(DnsEvent {
-                id: new_id(),
-                event_type: "reset".to_string(),
-                server_name: "System DNS".to_string(),
-                addresses: Vec::new(),
-                latency_ms: None,
-                success: false,
-                detail: Some(e.message.clone()),
-                timestamp: now_millis(),
-            });
-            Err(e.message)
+        success = false;
+        error_msg = e.message;
+    }
+
+    if let Err(e) = crate::dns::chrome_dns::reset_chrome_doh() {
+        log::error!("[dns] Failed to reset Chrome DoH: {}", e.message);
+    }
+
+    if success {
+        log::info!("[dns] Reset to default DNS");
+        if let Ok(mut config) = crate::config::load_config() {
+            config.active_server_id = None;
+            let _ = crate::config::save_config(&config);
         }
+        let _ = history::add_event(DnsEvent {
+            id: new_id(),
+            event_type: "reset".to_string(),
+            server_name: "Default DNS".to_string(),
+            addresses: Vec::new(),
+            latency_ms: None,
+            success: true,
+            detail: None,
+            timestamp: now_millis(),
+        });
+        send_notification(app_handle, "DNS Reset", "Reset to default DNS");
+        let _ = crate::rebuild_tray_menu(app_handle);
+        Ok(())
+    } else {
+        let _ = history::add_event(DnsEvent {
+            id: new_id(),
+            event_type: "reset".to_string(),
+            server_name: "Default DNS".to_string(),
+            addresses: Vec::new(),
+            latency_ms: None,
+            success: false,
+            detail: Some(error_msg.clone()),
+            timestamp: now_millis(),
+        });
+        Err(error_msg)
     }
 }
 
@@ -332,4 +383,28 @@ pub fn test_dot_connectivity(dot_address: String) -> Result<f64, String> {
     dot::test_dot_connectivity(&dot_address)
         .inspect_err(|e| log::warn!("[dns] DoT connectivity test {}: {}", dot_address, e.message))
         .map_err(|e| e.message)
+}
+
+/// 获取 Chrome 当前的 DoH 设置
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_chrome_doh_status() -> Result<Option<String>, String> {
+    crate::dns::chrome_dns::get_chrome_doh().map_err(|e| e.message)
+}
+
+/// 手动设置 Chrome DoH 策略
+#[tauri::command(rename_all = "camelCase")]
+pub fn set_chrome_doh(doh_url: String) -> Result<(), String> {
+    crate::dns::chrome_dns::set_chrome_doh(&doh_url).map_err(|e| e.message)
+}
+
+/// 清除 Chrome DoH 策略
+#[tauri::command(rename_all = "camelCase")]
+pub fn reset_chrome_doh() -> Result<(), String> {
+    crate::dns::chrome_dns::reset_chrome_doh().map_err(|e| e.message)
+}
+
+/// 检查 Chrome 是否已安装
+#[tauri::command(rename_all = "camelCase")]
+pub fn is_chrome_installed() -> bool {
+    crate::dns::chrome_dns::is_chrome_installed()
 }

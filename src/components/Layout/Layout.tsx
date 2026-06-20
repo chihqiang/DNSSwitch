@@ -5,11 +5,9 @@
 
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet } from 'react-router-dom';
-import { useDnsStore } from '@/stores';
 
 export function Layout() {
   const { t } = useTranslation();
-  const dnsError = useDnsStore((s) => s.error);
 
   /** 导航标签定义 */
   const tabs = [
@@ -45,11 +43,6 @@ export function Layout() {
 
       {/* 页面内容（由 React Router 注入） */}
       <main className="flex-1 flex flex-col gap-4 overflow-y-auto">
-        {dnsError && (
-          <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">
-            {t('status.error_hint', { message: dnsError })}
-          </div>
-        )}
         <Outlet />
       </main>
     </div>

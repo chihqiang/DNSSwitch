@@ -64,6 +64,9 @@ pub struct DnsStatus {
     pub is_custom: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub latency: Option<f64>,
+    /// Chrome DoH 端点 URL（当 DNS 通过 Chrome 策略切换时）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chrome_doh_url: Option<String>,
 }
 
 /// DNS 延迟测试结果

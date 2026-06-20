@@ -13,7 +13,7 @@ import { QueryPage } from '@/pages/QueryPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { LogPage } from '@/pages/LogPage';
 import { StatusBar } from '@/components/StatusBar';
-import { ErrorBoundary, LoadingSpinner } from '@/components/common';
+import { ErrorBoundary, LoadingSpinner, ToastContainer } from '@/components/common';
 import { useConfig } from '@/hooks';
 import { useDnsStore } from '@/stores';
 import type { DnsHealthEvent, DnsLatencyUpdate } from '@/types';
@@ -72,6 +72,7 @@ function AppContent() {
         </Route>
       </Routes>
       <StatusBar />
+      <ToastContainer />
     </div>
   );
 }

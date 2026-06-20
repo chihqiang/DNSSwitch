@@ -20,11 +20,13 @@ const DNS_SWITCH_TIMEOUT_SECS: u64 = 30;
 /// 获取当前系统 DNS 状态
 pub fn get_current_dns_status() -> Result<DnsStatus, AppError> {
     let (service_name, dns_servers) = platform::get_current_dns()?;
+    let chrome_doh = super::chrome_dns::get_chrome_doh().ok().flatten();
     Ok(DnsStatus {
         current_servers: dns_servers,
         network_service: service_name,
-        is_custom: true, // 由前端根据是否为空来显示
+        is_custom: true,
         latency: None,
+        chrome_doh_url: chrome_doh,
     })
 }
 
@@ -75,9 +77,17 @@ fn run_with_timeout(cmd: &mut Command, timeout_secs: u64) -> Result<std::process
                 let msg = stderr.trim().to_string();
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let combined = if msg.is_empty() { stdout.trim().to_string() } else { msg };
-                if combined.contains("User canceled") || combined.contains("authorization cancelled") || combined.contains("ismissing") {
-                    log::info!("[dns] Privilege prompt cancelled or failed");
-                    return Err(AppError::new("Operation cancelled or permission denied"));
+                let lower = combined.to_lowercase();
+                if lower.contains("user canceled")
+                    || lower.contains("authorisation cancelled")
+                    || lower.contains("authorization cancelled")
+                    || lower.contains("ismissing")
+                    || lower.contains("(-128)")
+                    || lower.contains("已取消")
+                    || lower.contains("cancelled by user")
+                {
+                    log::info!("[dns] Privilege prompt cancelled by user");
+                    return Err(AppError::new("操作已取消"));
                 }
                 log::error!("[dns] Command failed: {}", combined);
                 return Err(AppError::new(format!("Command failed: {}", combined)));

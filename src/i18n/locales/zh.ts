@@ -21,6 +21,7 @@ export default {
     confirm_delete: '确认删除"{{name}}"？',
     confirm: '确认',
     custom: '自定义',
+    switch_chrome: '通过 Chrome 切换',
   },
   status: {
     healthy: '正常',
@@ -31,6 +32,9 @@ export default {
     quick_switch: '快速切换',
     error_hint: '错误: {{message}}',
     leak_detected: 'DNS 泄露!',
+    switch_success: '已切换到 {{name}}',
+    reset_success: 'DNS 已恢复为系统默认',
+    cancelled: '已取消',
   },
   tab: {
     servers: 'DNS 服务器',
@@ -41,7 +45,7 @@ export default {
   server: {
     title: 'DNS 服务器',
     refresh_latency: '刷新延迟',
-    reset_system: '恢复系统 DNS',
+    reset_system: '恢复默认 DNS',
     add_server: '添加服务器',
     add_title: '添加 DNS 服务器',
     edit_title: '编辑 DNS 服务器',
@@ -61,8 +65,9 @@ export default {
     no_addresses: '没有可测试的地址',
     empty_title: '没有 DNS 服务器',
     empty_desc: '添加自定义 DNS 服务器，或使用上方预设列表。',
-    no_ip_hint: '未配置 IP 地址，无法切换系统 DNS',
-    no_ip_form_hint: '系统 DNS 切换需要 IP 地址，DoH/DoT 只能用于查询。不带 IP 的服务器无法切换。',
+    no_ip_hint: '未配置 IP 地址和 DoH URL',
+    no_ip_form_hint: '没有 IP 地址的服务器将通过 Chrome DNS-over-HTTPS 切换。如果未安装 Chrome，则只能用于查询。',
+    no_dns_config: '无可用 DNS 配置',
     doh_hint: '可选 DNS-over-HTTPS 端点 URL',
     dot_hint: '可选 DNS-over-TLS 服务器地址 (端口 853)',
   },

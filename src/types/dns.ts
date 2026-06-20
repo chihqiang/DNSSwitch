@@ -81,6 +81,8 @@ export interface DnsStatus {
   /** 是否为自定义 DNS */
   isCustom: boolean;
   latency?: number;
+  /** Chrome DoH 端点 URL（当 DNS 通过 Chrome 策略切换时） */
+  chromeDohUrl?: string;
 }
 
 /** DNS 切换/操作事件（用于历史记录） */

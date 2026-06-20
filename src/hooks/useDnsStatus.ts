@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { logger } from '@/lib/log';
 import i18n from '@/i18n';
 import { useDnsStore } from '@/stores';
+import { useToastStore } from '@/stores/toastStore';
 import { useDnsServers } from './useDnsServers';
 import type { DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types';
 
@@ -55,6 +56,12 @@ export function useDnsStatus() {
         return;
       }
 
+      // 纯 DoH 服务器：无 IP 地址时检查 Chrome 是否可用
+      if (server.addresses.length === 0 && !server.dohUrl) {
+        useDnsStore.getState().setError(i18n.t('server.no_dns_config'));
+        return;
+      }
+
       useDnsStore.getState().setIsSwitching(true);
       useDnsStore.getState().setSwitchingServerId(serverId);
       useDnsStore.getState().setError(null);
@@ -64,17 +71,23 @@ export function useDnsStatus() {
           serverId: server.id,
           serverName: server.name,
           addresses: server.addresses,
+          dohUrl: server.dohUrl ?? null,
         });
-        logger.info(`Switched to ${server.name} (${server.addresses.join(', ')})`);
+        logger.info(`Switched to ${server.name} (${server.addresses.length > 0 ? server.addresses.join(', ') : `Chrome DoH: ${server.dohUrl}`})`);
         useDnsStore.getState().setActiveServer(serverId);
+        useToastStore.getState().addToast('success', i18n.t('status.switch_success', { name: server.name }));
         await fetchStatus();
-        const leak = await invoke<DnsLeakResult>('check_dns_leak', {
-          expectedAddresses: server.addresses,
-        });
-        useDnsStore.getState().setLastLeakResult(leak);
+        if (server.addresses.length > 0) {
+          const leak = await invoke<DnsLeakResult>('check_dns_leak', {
+            expectedAddresses: server.addresses,
+          });
+          useDnsStore.getState().setLastLeakResult(leak);
+        }
       } catch (e) {
-        logger.error(`Failed to switch DNS to ${server.name}: ${e}`);
-        useDnsStore.getState().setError(String(e));
+        const msg = String(e);
+        logger.error(`Failed to switch DNS to ${server.name}: ${msg}`);
+        useDnsStore.getState().setError(msg);
+        useToastStore.getState().addToast('error', msg);
       } finally {
         useDnsStore.getState().setIsSwitching(false);
         useDnsStore.getState().setSwitchingServerId(null);
@@ -92,10 +105,13 @@ export function useDnsStatus() {
       logger.info('Reset to system DNS');
       await invoke('reset_system_dns');
       useDnsStore.getState().clearActive();
+      useToastStore.getState().addToast('success', i18n.t('status.reset_success'));
       await fetchStatus();
     } catch (e) {
-      logger.error(`Failed to reset DNS: ${e}`);
-      useDnsStore.getState().setError(String(e));
+      const msg = String(e);
+      logger.error(`Failed to reset DNS: ${msg}`);
+      useDnsStore.getState().setError(msg);
+      useToastStore.getState().addToast('error', msg);
     } finally {
       useDnsStore.getState().setIsSwitching(false);
     }

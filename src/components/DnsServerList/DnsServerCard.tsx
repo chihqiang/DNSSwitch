@@ -76,7 +76,7 @@ export const DnsServerCard = memo(function DnsServerCard({
 
       {/* 操作按钮 */}
       <div className="flex gap-1.5 pt-3 border-t border-border">
-        {!server.isActive && server.addresses.length > 0 && (
+        {!server.isActive && (server.addresses.length > 0 || server.dohUrl) && (
           <Button
             variant={ButtonVariant.PRIMARY}
             size="sm"
@@ -84,10 +84,10 @@ export const DnsServerCard = memo(function DnsServerCard({
             disabled={isSwitching}
             isLoading={isThisSwitching}
           >
-            {t('common.switch')}
+            {server.addresses.length > 0 ? t('common.switch') : t('common.switch_chrome')}
           </Button>
         )}
-        {!server.isActive && server.addresses.length === 0 && (
+        {!server.isActive && server.addresses.length === 0 && !server.dohUrl && (
           <span className="text-xs text-text-muted self-center">{t('server.no_ip_hint')}</span>
         )}
         <Button
