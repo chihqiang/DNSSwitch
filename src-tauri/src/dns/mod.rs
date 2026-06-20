@@ -6,3 +6,4 @@ pub mod system_dns;
 pub mod monitor;
 pub mod doh;
 pub mod dot;
+pub mod schedule;

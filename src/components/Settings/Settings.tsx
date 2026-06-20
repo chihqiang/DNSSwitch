@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { save, open } from '@tauri-apps/plugin-dialog'
+import { enable as enableAutostart, disable as disableAutostart } from '@tauri-apps/plugin-autostart'
 import { useTranslation } from 'react-i18next'
 import { useConfigStore } from '@/stores'
 import { ThemeMode } from '@/types'
@@ -116,7 +117,18 @@ export function Settings({ onSave }: SettingsProps) {
               type="checkbox"
               className="w-4 h-4 accent-accent rounded"
               checked={settings.autoStart}
-              onChange={(e) => updateSettings({ autoStart: e.target.checked })}
+              onChange={async (e) => {
+                updateSettings({ autoStart: e.target.checked })
+                try {
+                  if (e.target.checked) {
+                    await enableAutostart()
+                  } else {
+                    await disableAutostart()
+                  }
+                } catch (err) {
+                  console.error('Failed to toggle autostart:', err)
+                }
+              }}
             />
             <span className="text-sm">{t('settings.auto_start')}</span>
           </label>

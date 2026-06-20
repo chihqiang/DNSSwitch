@@ -26,20 +26,26 @@ pub fn get_current_dns() -> Result<DnsStatus, String> {
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn switch_dns(server_id: String, server_name: String, addresses: Vec<String>) -> Result<(), String> {
+pub fn switch_dns(
+    app_handle: tauri::AppHandle,
+    server_id: String,
+    server_name: String,
+    addresses: Vec<String>,
+) -> Result<(), String> {
     match system_dns::switch_to_dns(&server_id, &addresses) {
         Ok(()) => {
             let latency = addresses.first().and_then(|addr| resolver::measure_latency(addr).ok());
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
                 event_type: "switch".to_string(),
-                server_name,
-                addresses,
+                server_name: server_name.clone(),
+                addresses: addresses.clone(),
                 latency_ms: latency,
                 success: true,
                 detail: None,
                 timestamp: now_millis(),
             });
+            send_notification(&app_handle, "DNS Switched", &format!("Switched to {}", server_name));
             Ok(())
         }
         Err(e) => {
@@ -55,6 +61,15 @@ pub fn switch_dns(server_id: String, server_name: String, addresses: Vec<String>
             });
             Err(e.message)
         }
+    }
+}
+
+fn send_notification(_app_handle: &tauri::AppHandle, title: &str, body: &str) {
+    let config = crate::config::load_config().ok();
+    if config.map(|c| c.settings.notify_on_switch).unwrap_or(false) {
+        let _ = std::process::Command::new("osascript")
+            .args(["-e", &format!("display notification \"{}\" with title \"{}\"", body, title)])
+            .output();
     }
 }
 
