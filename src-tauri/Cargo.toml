@@ -1,5 +1,5 @@
 [package]
-name = "dnsswitch"
+name = "DNSSwitch"
 version = "0.0.1"
 description = "一款基于 Tauri 和 Rust 打造的轻量级桌面 DNS 切换与智能调度工具。"
 authors = ["chihqiang"]
