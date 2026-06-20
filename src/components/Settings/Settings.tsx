@@ -56,7 +56,9 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 export function Settings({ onSave }: SettingsProps) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>('general');
-  const { config, updateSettings, updateTheme, isSaving, error, setConfig } = useConfigStore();
+  const config = useConfigStore((s) => s.config);
+  const isSaving = useConfigStore((s) => s.isSaving);
+  const error = useConfigStore((s) => s.error);
   const { systemInfo, networkServices, loading: systemLoading } = useSystemInfo();
   const { settings } = config;
 
@@ -89,12 +91,12 @@ export function Settings({ onSave }: SettingsProps) {
     if (!path) return;
     try {
       const cfg = await invoke('import_config', { filePath: path });
-      setConfig(cfg as AppConfig);
+      useConfigStore.getState().setConfig(cfg as AppConfig);
       alert(t('settings.import_success'));
     } catch (e) {
       alert(`${t('settings.import_failed')}: ${e}`);
     }
-  }, [t, setConfig]);
+}, [t]);
 
   /** 切换语言 */
   function handleLanguageChange(lng: string) {
@@ -135,7 +137,7 @@ export function Settings({ onSave }: SettingsProps) {
               className="w-4 h-4 accent-accent rounded"
               checked={settings.autoStart}
               onChange={async (e) => {
-                updateSettings({ autoStart: e.target.checked });
+                useConfigStore.getState().updateSettings({ autoStart: e.target.checked });
                 try {
                   if (e.target.checked) {
                     await enableAutostart();
@@ -155,7 +157,7 @@ export function Settings({ onSave }: SettingsProps) {
               type="checkbox"
               className="w-4 h-4 accent-accent rounded"
               checked={settings.minimizeToTray}
-              onChange={(e) => updateSettings({ minimizeToTray: e.target.checked })}
+              onChange={(e) => useConfigStore.getState().updateSettings({ minimizeToTray: e.target.checked })}
             />
             <span className="text-sm">{t('settings.minimize_to_tray')}</span>
           </label>
@@ -165,7 +167,7 @@ export function Settings({ onSave }: SettingsProps) {
               type="checkbox"
               className="w-4 h-4 accent-accent rounded"
               checked={settings.notifyOnSwitch}
-              onChange={(e) => updateSettings({ notifyOnSwitch: e.target.checked })}
+              onChange={(e) => useConfigStore.getState().updateSettings({ notifyOnSwitch: e.target.checked })}
             />
             <span className="text-sm">{t('settings.notify_on_switch')}</span>
           </label>
@@ -175,7 +177,7 @@ export function Settings({ onSave }: SettingsProps) {
               type="checkbox"
               className="w-4 h-4 accent-accent rounded"
               checked={settings.checkUpdates}
-              onChange={(e) => updateSettings({ checkUpdates: e.target.checked })}
+              onChange={(e) => useConfigStore.getState().updateSettings({ checkUpdates: e.target.checked })}
             />
             <span className="text-sm">{t('settings.check_updates')}</span>
           </label>
@@ -197,7 +199,7 @@ export function Settings({ onSave }: SettingsProps) {
               min={LATENCY_CHECK_INTERVAL_MIN_S}
               max={LATENCY_CHECK_INTERVAL_MAX_S}
               onChange={(e) =>
-                updateSettings({
+                useConfigStore.getState().updateSettings({
                   latencyCheckInterval: Number(e.target.value) * 1000,
                 })
               }
@@ -233,7 +235,7 @@ export function Settings({ onSave }: SettingsProps) {
             <select
               className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
               value={config.theme.mode}
-              onChange={(e) => updateTheme(e.target.value as (typeof ThemeMode)[keyof typeof ThemeMode])}
+              onChange={(e) => useConfigStore.getState().updateTheme(e.target.value as (typeof ThemeMode)[keyof typeof ThemeMode])}
             >
               {THEME_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>

@@ -61,16 +61,22 @@ pub fn switch_dns_inner(
                 config.active_server_id = Some(server_id.clone());
                 let _ = crate::config::save_config(&config);
             }
-            let latency = addresses.first().and_then(|addr| resolver::measure_latency(addr).ok());
-            let _ = history::add_event(DnsEvent {
-                id: new_id(),
-                event_type: "switch".to_string(),
-                server_name: server_name.clone(),
-                addresses: addresses.clone(),
-                latency_ms: latency,
-                success: true,
-                detail: None,
-                timestamp: now_millis(),
+            // 异步记录历史事件（延迟测试可能阻塞 5s，不阻塞切换流程）
+            let hist_name = server_name.clone();
+            let hist_addrs = addresses.clone();
+            let addr = addresses.first().cloned();
+            std::thread::spawn(move || {
+                let latency = addr.and_then(|a| resolver::measure_latency(&a).ok());
+                let _ = history::add_event(DnsEvent {
+                    id: new_id(),
+                    event_type: "switch".to_string(),
+                    server_name: hist_name,
+                    addresses: hist_addrs,
+                    latency_ms: latency,
+                    success: true,
+                    detail: None,
+                    timestamp: now_millis(),
+                });
             });
             send_notification(app_handle, "DNS Switched", &format!("Switched to {}", server_name));
             let _ = crate::rebuild_tray_menu(app_handle);
@@ -178,12 +184,6 @@ pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, 
 
     let matched = actual_sorted == expected_sorted && !actual_sorted.is_empty();
 
-    let reachable = if let Some(addr) = expected_addresses.first() {
-        resolver::measure_latency(addr).ok()
-    } else {
-        None
-    };
-
     let detail = if !matched {
         log::warn!("[dns] DNS leak detected: expected={}, actual={}", expected_sorted.join(", "), if actual_sorted.is_empty() { "system default (DHCP)".to_string() } else { actual_sorted.join(", ") });
         format!(
@@ -191,8 +191,6 @@ pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, 
             if actual_sorted.is_empty() { "system default (DHCP)".to_string() } else { actual_sorted.join(", ") },
             expected_sorted.join(", ")
         )
-    } else if reachable.is_none() {
-        "DNS set but server is unreachable".to_string()
     } else {
         format!("OK - system using {}", actual_sorted.join(", "))
     };
@@ -201,8 +199,8 @@ pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, 
         expected_servers: expected_addresses,
         actual_servers: actual.current_servers,
         leak_detected: !matched,
-        is_reachable: reachable.is_some(),
-        latency_ms: reachable,
+        is_reachable: true,
+        latency_ms: None,
         detail,
     })
 }

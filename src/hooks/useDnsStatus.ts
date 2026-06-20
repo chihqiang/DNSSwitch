@@ -12,30 +12,23 @@ import { useDnsServers } from './useDnsServers';
 import type { DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types';
 
 export function useDnsStatus() {
-  const {
-    currentStatus,
-    isTesting,
-    isSwitching,
-    error,
-    lastLeakResult,
-    switchingServerId,
-    testingServerId,
-    setCurrentStatus,
-    setIsTesting,
-    setIsSwitching,
-    setError,
-    setLastLeakResult,
-    setSwitchingServerId,
-    setTestingServerId,
-  } = useDnsStore();
+  // 仅订阅需要的字段，避免 healthStatus 更新（每 5s）触发不必要的重渲染
+  const currentStatus = useDnsStore((s) => s.currentStatus);
+  const isTesting = useDnsStore((s) => s.isTesting);
+  const isSwitching = useDnsStore((s) => s.isSwitching);
+  const error = useDnsStore((s) => s.error);
+  const lastLeakResult = useDnsStore((s) => s.lastLeakResult);
+  const switchingServerId = useDnsStore((s) => s.switchingServerId);
+  const testingServerId = useDnsStore((s) => s.testingServerId);
+
   const { servers } = useDnsServers();
 
   /** 从系统获取当前 DNS 状态，并匹配服务器列表推断当前活跃服务器 */
   const fetchStatus = useCallback(async () => {
     try {
       const status = await invoke<DnsStatus>('get_current_dns');
-      setCurrentStatus(status);
-      setError(null);
+      useDnsStore.getState().setCurrentStatus(status);
+      useDnsStore.getState().setError(null);
       // 根据系统 DNS 地址匹配活跃服务器
       const allServers = useDnsStore.getState().servers;
       if (status.isCustom && status.currentServers.length > 0) {
@@ -49,56 +42,52 @@ export function useDnsStatus() {
         }
       }
     } catch (e) {
-      setError(String(e));
+      useDnsStore.getState().setError(String(e));
     }
-  }, [setCurrentStatus, setError]);
+  }, []);
 
   /** 切换到指定 DNS 服务器 */
   const switchDns = useCallback(
     async (serverId: string) => {
       const server = servers.find((s) => s.id === serverId);
       if (!server) {
-        setError(`${i18n.t('server.not_found', { id: serverId })}`);
+        useDnsStore.getState().setError(`${i18n.t('server.not_found', { id: serverId })}`);
         return;
       }
 
-      setIsSwitching(true);
-      setSwitchingServerId(serverId);
-      setError(null);
-      setLastLeakResult(null);
+      useDnsStore.getState().setIsSwitching(true);
+      useDnsStore.getState().setSwitchingServerId(serverId);
+      useDnsStore.getState().setError(null);
+      useDnsStore.getState().setLastLeakResult(null);
       try {
-        // 调用 Rust 后端切换 DNS
         await invoke('switch_dns', {
           serverId: server.id,
           serverName: server.name,
           addresses: server.addresses,
         });
         logger.info(`Switched to ${server.name} (${server.addresses.join(', ')})`);
-        // 更新 UI 活跃状态
         useDnsStore.getState().setActiveServer(serverId);
-        // 刷新状态
         await fetchStatus();
-        // 检测 DNS 泄露
         const leak = await invoke<DnsLeakResult>('check_dns_leak', {
           expectedAddresses: server.addresses,
         });
-        setLastLeakResult(leak);
+        useDnsStore.getState().setLastLeakResult(leak);
       } catch (e) {
         logger.error(`Failed to switch DNS to ${server.name}: ${e}`);
-        setError(String(e));
+        useDnsStore.getState().setError(String(e));
       } finally {
-        setIsSwitching(false);
-        setSwitchingServerId(null);
+        useDnsStore.getState().setIsSwitching(false);
+        useDnsStore.getState().setSwitchingServerId(null);
       }
     },
-    [servers, setIsSwitching, setSwitchingServerId, setError, fetchStatus, setLastLeakResult],
+    [servers, fetchStatus],
   );
 
   /** 重置为系统默认 DNS */
   const resetToSystem = useCallback(async () => {
-    setIsSwitching(true);
-    setError(null);
-    setLastLeakResult(null);
+    useDnsStore.getState().setIsSwitching(true);
+    useDnsStore.getState().setError(null);
+    useDnsStore.getState().setLastLeakResult(null);
     try {
       logger.info('Reset to system DNS');
       await invoke('reset_system_dns');
@@ -106,24 +95,24 @@ export function useDnsStatus() {
       await fetchStatus();
     } catch (e) {
       logger.error(`Failed to reset DNS: ${e}`);
-      setError(String(e));
+      useDnsStore.getState().setError(String(e));
     } finally {
-      setIsSwitching(false);
+      useDnsStore.getState().setIsSwitching(false);
     }
-  }, [setIsSwitching, setError, setLastLeakResult, fetchStatus]);
+  }, [fetchStatus]);
 
   /** 测试指定服务器的延迟 */
   const testLatency = useCallback(
     async (serverId: string) => {
       const server = servers.find((s) => s.id === serverId);
       if (!server || server.addresses.length === 0) {
-        setError(i18n.t('server.no_addresses'));
+        useDnsStore.getState().setError(i18n.t('server.no_addresses'));
         return null;
       }
 
-      setIsTesting(true);
-      setTestingServerId(serverId);
-      setError(null);
+      useDnsStore.getState().setIsTesting(true);
+      useDnsStore.getState().setTestingServerId(serverId);
+      useDnsStore.getState().setError(null);
       try {
         const result = await invoke<DnsLatencyTest>('test_dns_latency', {
           serverId: server.id,
@@ -138,14 +127,14 @@ export function useDnsStatus() {
         return result;
       } catch (e) {
         logger.error(`Failed to test latency for ${server.name}: ${e}`);
-        setError(String(e));
+        useDnsStore.getState().setError(String(e));
         return null;
       } finally {
-        setIsTesting(false);
-        setTestingServerId(null);
+        useDnsStore.getState().setIsTesting(false);
+        useDnsStore.getState().setTestingServerId(null);
       }
     },
-    [servers, setIsTesting, setTestingServerId, setError],
+    [servers],
   );
 
   // 组件挂载时获取当前 DNS 状态

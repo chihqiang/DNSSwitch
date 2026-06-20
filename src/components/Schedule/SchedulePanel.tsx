@@ -17,7 +17,7 @@ interface SchedulePanelProps {
 
 export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
   const { t } = useTranslation();
-  const { config, setScheduleEnabled } = useConfigStore();
+  const config = useConfigStore((s) => s.config);
   const { rules, enabled } = config.schedule;
 
   /** 切换单条规则的启用/禁用状态 */
@@ -40,7 +40,7 @@ export function SchedulePanel({ onAdd, onEdit, onDelete }: SchedulePanelProps) {
               type="checkbox"
               className="sr-only"
               checked={enabled}
-              onChange={(e) => setScheduleEnabled(e.target.checked)}
+              onChange={(e) => useConfigStore.getState().setScheduleEnabled(e.target.checked)}
             />
             <span
               className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${enabled ? 'bg-accent' : 'bg-border'}`}

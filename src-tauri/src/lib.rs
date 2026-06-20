@@ -32,7 +32,7 @@ pub fn run() {
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let log_file = log_dir.join(format!("{}.log", today));
 
-    fern::Dispatch::new()
+    let mut dispatch = fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
                 "{} [{}] {}",
@@ -42,18 +42,16 @@ pub fn run() {
             ))
         })
         .level(log::LevelFilter::Debug)
-        .chain(std::io::stdout())
-        .chain(match fern::log_file(&log_file) {
-            Ok(f) => f,
-            Err(e) => {
-                eprintln!("Warning: failed to open {}: {}", log_file.display(), e);
-                return;
-            }
-        })
-        .apply()
-        .unwrap_or_else(|e| {
-            eprintln!("Warning: failed to initialize logger: {}", e);
-        });
+        .chain(std::io::stdout());
+
+    match fern::log_file(&log_file) {
+        Ok(f) => dispatch = dispatch.chain(Box::new(std::io::BufWriter::new(f)) as Box<dyn std::io::Write + Send>),
+        Err(e) => eprintln!("Warning: failed to open {}: {}", log_file.display(), e),
+    }
+
+    dispatch.apply().unwrap_or_else(|e| {
+        eprintln!("Warning: failed to initialize logger: {}", e);
+    });
 
     log::info!("dnsswitch starting");
 

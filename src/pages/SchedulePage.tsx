@@ -19,7 +19,6 @@ export function SchedulePage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { addScheduleRule, updateScheduleRule, removeScheduleRule } = useConfigStore();
 
   /** 编辑规则 */
   const handleEdit = (rule: ScheduleRule) => {
@@ -33,7 +32,7 @@ export function SchedulePage() {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await removeScheduleRule(deleteTarget.id);
+      await useConfigStore.getState().removeScheduleRule(deleteTarget.id);
       setDeleteTarget(null);
     } catch (e) {
       setDeleteError(String(e));
@@ -46,7 +45,7 @@ export function SchedulePage() {
   const handleFormSubmit = useCallback(
     (rule: ScheduleRule) => {
       if (editingRule) {
-        updateScheduleRule(rule.id, {
+        useConfigStore.getState().updateScheduleRule(rule.id, {
           name: rule.name,
           condition: rule.condition,
           action: rule.action,
@@ -54,12 +53,12 @@ export function SchedulePage() {
           description: rule.description,
         });
       } else {
-        addScheduleRule(rule);
+        useConfigStore.getState().addScheduleRule(rule);
       }
       setShowAddRule(false);
       setEditingRule(null);
     },
-    [editingRule, addScheduleRule, updateScheduleRule],
+    [editingRule],
   );
 
   function closeForm() {

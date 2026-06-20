@@ -10,37 +10,41 @@ import { useConfigStore } from '@/stores';
 import type { AppConfig } from '@/types';
 
 export function useConfig() {
-  const { config, isLoaded, isSaving, error, setConfig, setIsLoaded, setIsSaving, setError } = useConfigStore();
+  const config = useConfigStore((s) => s.config);
+  const isLoaded = useConfigStore((s) => s.isLoaded);
+  const isSaving = useConfigStore((s) => s.isSaving);
+  const error = useConfigStore((s) => s.error);
 
   /** 从 Rust 后端加载配置 */
   const loadConfig = useCallback(async () => {
     try {
       const result = await invoke<AppConfig>('load_config');
-      setConfig(result);
+      useConfigStore.getState().setConfig(result);
       logger.info(`Configuration loaded (${result.servers.length} servers, ${result.schedule.rules.length} rules)`);
-      setError(null);
+      useConfigStore.getState().setError(null);
     } catch (e) {
       logger.error(`Failed to load configuration: ${e}`);
-      setError(String(e));
+      useConfigStore.getState().setError(String(e));
     } finally {
-      setIsLoaded(true);
+      useConfigStore.getState().setIsLoaded(true);
     }
-  }, [setConfig, setError, setIsLoaded]);
+  }, []);
 
   /** 将当前配置保存到 Rust 后端 */
   const saveConfig = useCallback(async () => {
-    setIsSaving(true);
-    setError(null);
+    useConfigStore.getState().setIsSaving(true);
+    useConfigStore.getState().setError(null);
+    const current = useConfigStore.getState().config;
     try {
-      await invoke('save_config', { config });
-      setError(null);
+      await invoke('save_config', { config: current });
+      useConfigStore.getState().setError(null);
     } catch (e) {
       logger.error(`Failed to save configuration: ${e}`);
-      setError(String(e));
+      useConfigStore.getState().setError(String(e));
     } finally {
-      setIsSaving(false);
+      useConfigStore.getState().setIsSaving(false);
     }
-  }, [config, setIsSaving, setError]);
+  }, []);
 
   return {
     config,
