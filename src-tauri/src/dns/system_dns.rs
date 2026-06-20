@@ -131,6 +131,28 @@ fn detect_active_network_service() -> Result<String, AppError> {
     Err(AppError::new(ERR_NO_ACTIVE_SERVICE))
 }
 
+pub fn get_current_ssid() -> Option<String> {
+    let output = std::process::Command::new(
+        "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport",
+    )
+    .arg("-I")
+    .output()
+    .ok()?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if let Some(ssid) = trimmed.strip_prefix("SSID: ") {
+            let s = ssid.trim().to_string();
+            if !s.is_empty() && s != "(null)" && s != "N/A" {
+                return Some(s);
+            }
+        }
+    }
+
+    None
+}
+
 fn parse_scutil_dns_output(output: &str) -> Vec<String> {
     let mut servers = Vec::new();
     let mut in_resolver = false;

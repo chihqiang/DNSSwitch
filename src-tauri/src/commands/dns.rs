@@ -32,6 +32,15 @@ pub fn switch_dns(
     server_name: String,
     addresses: Vec<String>,
 ) -> Result<(), String> {
+    switch_dns_inner(&app_handle, server_id, server_name, addresses)
+}
+
+pub fn switch_dns_inner(
+    app_handle: &tauri::AppHandle,
+    server_id: String,
+    server_name: String,
+    addresses: Vec<String>,
+) -> Result<(), String> {
     match system_dns::switch_to_dns(&server_id, &addresses) {
         Ok(()) => {
             let latency = addresses.first().and_then(|addr| resolver::measure_latency(addr).ok());
@@ -45,7 +54,8 @@ pub fn switch_dns(
                 detail: None,
                 timestamp: now_millis(),
             });
-            send_notification(&app_handle, "DNS Switched", &format!("Switched to {}", server_name));
+            send_notification(app_handle, "DNS Switched", &format!("Switched to {}", server_name));
+            let _ = crate::rebuild_tray_menu(app_handle);
             Ok(())
         }
         Err(e) => {
@@ -75,6 +85,10 @@ fn send_notification(_app_handle: &tauri::AppHandle, title: &str, body: &str) {
 
 #[tauri::command]
 pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
+    reset_system_dns_inner(&app_handle)
+}
+
+pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), String> {
     match system_dns::reset_to_system_dns() {
         Ok(()) => {
             let _ = history::add_event(DnsEvent {
@@ -87,7 +101,8 @@ pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
                 detail: None,
                 timestamp: now_millis(),
             });
-            send_notification(&app_handle, "DNS Reset", "Reset to system default DNS");
+            send_notification(app_handle, "DNS Reset", "Reset to system default DNS");
+            let _ = crate::rebuild_tray_menu(app_handle);
             Ok(())
         }
         Err(e) => {

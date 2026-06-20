@@ -9,8 +9,10 @@ pub fn load_config() -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-pub fn save_config(config: AppConfig) -> Result<(), String> {
-    config::save_config(&config).map_err(|e| e.message)
+pub fn save_config(app_handle: tauri::AppHandle, config: AppConfig) -> Result<(), String> {
+    config::save_config(&config).map_err(|e| e.message)?;
+    let _ = crate::rebuild_tray_menu(&app_handle);
+    Ok(())
 }
 
 #[tauri::command(rename_all = "camelCase")]

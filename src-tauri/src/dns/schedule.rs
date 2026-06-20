@@ -158,7 +158,14 @@ fn condition_matches(condition: &ScheduleCondition, startup_executed: &AtomicBoo
 
             in_time_range && day_matches
         }
-        ScheduleCondition::Network { .. } => false,
+        ScheduleCondition::Network { ssid, .. } => {
+            let current_ssid = system_dns::get_current_ssid();
+            if let Some(expected) = ssid {
+                current_ssid.as_deref() == Some(expected.as_str())
+            } else {
+                current_ssid.is_some()
+            }
+        }
         ScheduleCondition::Cron { expression } => matches_cron(expression),
         ScheduleCondition::Startup => !startup_executed.swap(true, Ordering::Relaxed),
         ScheduleCondition::Always => true,
