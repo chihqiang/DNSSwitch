@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { save, open } from '@tauri-apps/plugin-dialog'
 import { useTranslation } from 'react-i18next'
 import { useConfigStore } from '@/stores'
 import { ThemeMode } from '@/types'
 import { useSystemInfo } from '@/hooks'
-import { Card, Button, ButtonVariant } from '@/components/common'
+import { Card, Button, ButtonVariant, LoadingSpinner } from '@/components/common'
 import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel'
 import {
   LATENCY_CHECK_INTERVAL_MIN_S,
@@ -48,11 +49,15 @@ export function Settings({ onSave }: SettingsProps) {
   const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabKey>('general')
   const { config, updateSettings, updateTheme, isSaving, error, setConfig } = useConfigStore()
-  const { systemInfo, networkServices } = useSystemInfo()
+  const { systemInfo, networkServices, loading: systemLoading } = useSystemInfo()
   const { settings } = config
 
   const handleExport = useCallback(async () => {
-    const path = prompt(t('settings.export_path_hint') || 'Enter export path:')
+    const path = await save({
+      title: t('settings.export_config'),
+      defaultPath: 'dnsswitch-config.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
     if (!path) return
     try {
       await invoke('export_config', { filePath: path })
@@ -63,7 +68,12 @@ export function Settings({ onSave }: SettingsProps) {
   }, [t])
 
   const handleImport = useCallback(async () => {
-    const path = prompt(t('settings.import_path_hint') || 'Enter import path:')
+    const path = await open({
+      title: t('settings.import_config'),
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      multiple: false,
+      directory: false,
+    })
     if (!path) return
     try {
       const cfg = await invoke('import_config', { filePath: path })
@@ -214,33 +224,41 @@ export function Settings({ onSave }: SettingsProps) {
 
   const systemTab = (
     <div className="flex flex-col gap-4">
-      {systemInfo && (
-        <section>
-          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.system_info')}</h3>
-          <div className="bg-bg-secondary rounded">
-            <InfoRow label={t('settings.os')} value={systemInfo.os} />
-            <InfoRow label={t('settings.os_version')} value={systemInfo.osVersion} />
-            <InfoRow label={t('settings.hostname')} value={systemInfo.hostname} />
-            <InfoRow label={t('settings.kernel')} value={systemInfo.kernelVersion} />
-          </div>
-        </section>
-      )}
-
-      {networkServices.length > 0 && (
-        <section>
-          <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.network_services')}</h3>
-          <div className="bg-bg-secondary rounded">
-            {networkServices.map((svc) => (
-              <div key={svc.name} className="flex items-center gap-2 px-3 py-1.5 border-b border-border last:border-b-0">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`} />
-                <span className="text-xs text-text-primary">{svc.displayName}</span>
-                {svc.dnsServers.length > 0 && (
-                  <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
-                )}
+      {systemLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size={20} />
+        </div>
+      ) : (
+        <>
+          {systemInfo && (
+            <section>
+              <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.system_info')}</h3>
+              <div className="bg-bg-secondary rounded">
+                <InfoRow label={t('settings.os')} value={systemInfo.os} />
+                <InfoRow label={t('settings.os_version')} value={systemInfo.osVersion} />
+                <InfoRow label={t('settings.hostname')} value={systemInfo.hostname} />
+                <InfoRow label={t('settings.kernel')} value={systemInfo.kernelVersion} />
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
+          )}
+
+          {networkServices.length > 0 && (
+            <section>
+              <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.network_services')}</h3>
+              <div className="bg-bg-secondary rounded">
+                {networkServices.map((svc) => (
+                  <div key={svc.name} className="flex items-center gap-2 px-3 py-1.5 border-b border-border last:border-b-0">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`} />
+                    <span className="text-xs text-text-primary">{svc.displayName}</span>
+                    {svc.dnsServers.length > 0 && (
+                      <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   )

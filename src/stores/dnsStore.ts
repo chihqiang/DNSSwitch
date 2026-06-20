@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DnsServer, DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types'
+import type { DnsServer, DnsStatus, DnsLatencyTest, DnsLeakResult, DnsHealthEvent } from '@/types'
 import { MAX_LATENCY_HISTORY } from '@/constants'
 
 interface DnsState {
@@ -7,6 +7,7 @@ interface DnsState {
   servers: DnsServer[]
   latencyTests: DnsLatencyTest[]
   lastLeakResult: DnsLeakResult | null
+  healthStatus: DnsHealthEvent | null
   isTesting: boolean
   isSwitching: boolean
   error: string | null
@@ -20,6 +21,7 @@ interface DnsState {
   setLatencyTests: (tests: DnsLatencyTest[]) => void
   addLatencyTest: (test: DnsLatencyTest) => void
   setLastLeakResult: (result: DnsLeakResult | null) => void
+  setHealthStatus: (status: DnsHealthEvent | null) => void
   setIsTesting: (v: boolean) => void
   setIsSwitching: (v: boolean) => void
   setError: (error: string | null) => void
@@ -30,6 +32,7 @@ export const useDnsStore = create<DnsState>((set) => ({
   servers: [],
   latencyTests: [],
   lastLeakResult: null,
+  healthStatus: null,
   isTesting: false,
   isSwitching: false,
   error: null,
@@ -68,6 +71,8 @@ export const useDnsStore = create<DnsState>((set) => ({
     })),
 
   setLastLeakResult: (result) => set({ lastLeakResult: result }),
+
+  setHealthStatus: (status) => set({ healthStatus: status }),
 
   setIsTesting: (v) => set({ isTesting: v }),
   setIsSwitching: (v) => set({ isSwitching: v }),

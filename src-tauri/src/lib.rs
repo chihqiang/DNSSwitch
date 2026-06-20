@@ -7,6 +7,12 @@ mod error;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            dns::monitor::spawn_monitor(handle);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::dns::get_current_dns,
             commands::dns::switch_dns,

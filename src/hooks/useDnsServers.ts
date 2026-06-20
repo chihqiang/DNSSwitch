@@ -5,7 +5,7 @@ import { PRESET_SERVERS } from '@/types'
 import type { DnsServer, DnsLatencyTest } from '@/types'
 
 export function useDnsServers() {
-  const { servers, setServers, addServer, removeServer, updateServer, addLatencyTest } =
+  const { servers, setServers, addServer, removeServer, updateServer } =
     useDnsStore()
   const { config, isLoaded, setConfig } = useConfigStore()
 
@@ -54,8 +54,9 @@ export function useDnsServers() {
   )
 
   const refreshLatency = useCallback(async () => {
+    const currentServers = useDnsStore.getState().servers
     const results = await Promise.allSettled(
-      servers
+      currentServers
         .filter((s) => s.addresses.length > 0)
         .map((server) =>
           invoke<DnsLatencyTest>('test_dns_latency', {
@@ -64,17 +65,24 @@ export function useDnsServers() {
           })
         )
     )
+    const { updateServer, addLatencyTest } = useDnsStore.getState()
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value.success) {
         updateServer(result.value.serverId, { latency: result.value.latencyMs })
         addLatencyTest(result.value)
       }
     }
-  }, [servers, updateServer, addLatencyTest])
+  }, [])
 
   useEffect(() => {
     loadServers()
   }, [loadServers])
+
+  useEffect(() => {
+    if (!isLoaded || !config.settings.latencyCheckInterval) return
+    const id = setInterval(refreshLatency, config.settings.latencyCheckInterval)
+    return () => clearInterval(id)
+  }, [isLoaded, config.settings.latencyCheckInterval, refreshLatency])
 
   return {
     servers,

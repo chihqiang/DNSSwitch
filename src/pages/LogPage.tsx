@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Card, Badge, BadgeVariant, Button, ButtonVariant } from '@/components/common'
+import { Card, Badge, BadgeVariant, Button, ButtonVariant, ErrorBoundary } from '@/components/common'
 import { useRequestLogStore } from '@/stores'
 
 export function LogPage() {
@@ -7,7 +7,8 @@ export function LogPage() {
   const { entries, clearEntries } = useRequestLogStore()
 
   return (
-    <Card className="flex flex-col gap-3 p-3">
+    <ErrorBoundary>
+      <Card className="flex flex-col gap-3 p-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{t('log.title')}</h2>
         {entries.length > 0 && (
@@ -54,5 +55,6 @@ export function LogPage() {
         </div>
       )}
     </Card>
+    </ErrorBoundary>
   )
 }

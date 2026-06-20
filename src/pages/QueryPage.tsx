@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useTranslation } from 'react-i18next'
-import { Button, ButtonVariant, Card, Select } from '@/components/common'
+import { Button, ButtonVariant, Card, Select, EmptyState, ErrorBoundary } from '@/components/common'
 import { useDnsServers } from '@/hooks'
 import { useRequestLogStore } from '@/stores'
 
@@ -135,7 +135,8 @@ export function QueryPage() {
   }, [domain, recordType, protocol, endpoint, serverOptions])
 
   return (
-    <Card className="flex flex-col gap-4 p-4">
+    <ErrorBoundary>
+      <Card className="flex flex-col gap-4 p-4">
       <h2 className="text-sm font-semibold">{t('query.title')}</h2>
 
       <div className="flex flex-col gap-3">
@@ -211,6 +212,14 @@ export function QueryPage() {
         </div>
       </div>
 
+      {servers.length === 0 && (
+        <EmptyState
+          icon="~"
+          title={t('query.no_servers_title')}
+          description={t('query.no_servers_desc')}
+        />
+      )}
+
       {error && (
         <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">
           {error}
@@ -241,5 +250,6 @@ export function QueryPage() {
         </div>
       )}
     </Card>
+    </ErrorBoundary>
   )
 }

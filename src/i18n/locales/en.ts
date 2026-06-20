@@ -18,6 +18,8 @@ export default {
     confirm: 'Confirm',
   },
   status: {
+    healthy: 'Healthy',
+    unhealthy: 'Unhealthy',
     custom_dns: 'Custom DNS',
     current_dns: 'Current DNS:',
     latency_ms: '{{latency}}ms',
@@ -52,6 +54,8 @@ export default {
     reset_to_system: 'Reset to System Default',
     not_found: 'Server not found: {{id}}',
     no_addresses: 'No addresses to test',
+    empty_title: 'No DNS Servers',
+    empty_desc: 'Add a custom DNS server or use the preset list above.',
   },
   dns_provider: {
     system: 'System Default',
@@ -111,6 +115,7 @@ export default {
     name_required: 'Rule name is required',
     server_required: 'Please select a target server',
     time_required: 'Start and end time are required',
+    no_servers: 'No DNS servers available. Add one in the Servers tab first.',
     day_sun: 'Sun',
     day_mon: 'Mon',
     day_tue: 'Tue',
@@ -173,6 +178,8 @@ export default {
     server: 'Server',
     latency: 'Latency',
     no_results: 'No results returned',
+    no_servers_title: 'No DNS Servers',
+    no_servers_desc: 'Add a DNS server first in the Servers tab to use the query tool.',
   },
   theme: {
     system: 'System',

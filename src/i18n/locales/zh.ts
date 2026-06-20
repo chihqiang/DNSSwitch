@@ -18,6 +18,8 @@ export default {
     confirm: '确认',
   },
   status: {
+    healthy: '正常',
+    unhealthy: '异常',
     custom_dns: '自定义 DNS',
     current_dns: '当前 DNS:',
     latency_ms: '{{latency}}毫秒',
@@ -52,6 +54,8 @@ export default {
     reset_to_system: '恢复系统默认',
     not_found: '未找到服务器: {{id}}',
     no_addresses: '没有可测试的地址',
+    empty_title: '没有 DNS 服务器',
+    empty_desc: '添加自定义 DNS 服务器，或使用上方预设列表。',
   },
   dns_provider: {
     system: '系统默认',
@@ -111,6 +115,7 @@ export default {
     name_required: '请输入规则名称',
     server_required: '请选择目标服务器',
     time_required: '请填写开始和结束时间',
+    no_servers: '暂无 DNS 服务器，请先在「服务器」页面添加。',
     day_sun: '日',
     day_mon: '一',
     day_tue: '二',
@@ -173,6 +178,8 @@ export default {
     server: '服务器',
     latency: '延迟',
     no_results: '无结果返回',
+    no_servers_title: '没有 DNS 服务器',
+    no_servers_desc: '请先在「服务器」页面添加 DNS 服务器后再使用查询工具。',
   },
   theme: {
     system: '系统',

@@ -242,16 +242,19 @@ export function AddRuleForm({ editingRule, onSubmit, onCancel }: AddRuleFormProp
 
       <div className="flex flex-col gap-1">
         <label className={LABEL_CLASS}>{t('schedule.target_server')}</label>
-        <select
-          className={`${SELECT_CLASS} ${INPUT_FOCUS}`}
-          value={targetServerId}
-          onChange={(e) => setTargetServerId(e.target.value)}
-        >
-          {servers.length === 0 && <option value="">--</option>}
-          {servers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+        {servers.length === 0 ? (
+          <p className="text-xs text-text-muted">{t('schedule.no_servers')}</p>
+        ) : (
+          <select
+            className={`${SELECT_CLASS} ${INPUT_FOCUS}`}
+            value={targetServerId}
+            onChange={(e) => setTargetServerId(e.target.value)}
+          >
+            {servers.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        )}
         {errors.server && <span className={ERROR_CLASS}>{errors.server}</span>}
       </div>
 

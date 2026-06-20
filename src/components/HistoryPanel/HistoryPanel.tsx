@@ -1,20 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useTranslation } from 'react-i18next'
-import { Card, Button, ButtonVariant } from '@/components/common'
+import { Button, ButtonVariant, LoadingSpinner } from '@/components/common'
 import type { DnsEvent } from '@/types'
 
 export function HistoryPanel() {
   const { t } = useTranslation()
   const [events, setEvents] = useState<DnsEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setIsLoading(true)
+    setLoadError(null)
     try {
       const data = await invoke<DnsEvent[]>('get_history')
       setEvents(data)
-    } catch {
+    } catch (e) {
+      setLoadError(String(e))
       setEvents([])
     } finally {
       setIsLoading(false)
@@ -34,7 +37,7 @@ export function HistoryPanel() {
   }
 
   return (
-    <Card className="flex flex-col gap-3 p-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{t('history.title')}</h2>
         {events.length > 0 && (
@@ -44,9 +47,19 @@ export function HistoryPanel() {
         )}
       </div>
 
-      {isLoading && <p className="text-sm text-text-muted">{t('common.loading')}</p>}
+      {isLoading && (
+        <div className="flex items-center justify-center py-6">
+          <LoadingSpinner size={18} />
+        </div>
+      )}
 
-      {!isLoading && events.length === 0 && (
+      {loadError && (
+        <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">
+          {loadError}
+        </div>
+      )}
+
+      {!isLoading && !loadError && events.length === 0 && (
         <p className="text-sm text-text-muted text-center py-4">{t('history.empty')}</p>
       )}
 
@@ -74,6 +87,6 @@ export function HistoryPanel() {
           ))}
         </div>
       )}
-    </Card>
+    </div>
   )
 }

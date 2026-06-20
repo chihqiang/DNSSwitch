@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DnsServerList } from '@/components/DnsServerList'
 import { AddServerForm } from '@/components/AddServerForm'
-import { Modal, Button, ButtonVariant } from '@/components/common'
+import { Modal, Button, ButtonVariant, ErrorBoundary } from '@/components/common'
 import { useDnsServers } from '@/hooks'
 import type { DnsServer } from '@/types'
 
@@ -11,6 +11,8 @@ export function ServersPage() {
   const [editingServer, setEditingServer] = useState<DnsServer | null>(null)
   const [showAddServer, setShowAddServer] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const { addCustomServer, editServer, deleteServer } = useDnsServers()
 
   const handleEdit = (server: DnsServer) => {
@@ -18,27 +20,39 @@ export function ServersPage() {
     setShowAddServer(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return
-    deleteServer(deleteTarget.id)
-    setDeleteTarget(null)
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteServer(deleteTarget.id)
+      setDeleteTarget(null)
+    } catch (e) {
+      setDeleteError(String(e))
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleFormSubmit = useCallback(
-    (server: DnsServer) => {
-      if (editingServer) {
-        editServer(server.id, {
-          name: server.name,
-          addresses: server.addresses,
-          tags: server.tags,
-          dohUrl: server.dohUrl,
-          dotAddress: server.dotAddress,
-        })
-      } else {
-        addCustomServer(server)
+    async (server: DnsServer) => {
+      try {
+        if (editingServer) {
+          await editServer(server.id, {
+            name: server.name,
+            addresses: server.addresses,
+            tags: server.tags,
+            dohUrl: server.dohUrl,
+            dotAddress: server.dotAddress,
+          })
+        } else {
+          await addCustomServer(server)
+        }
+        setShowAddServer(false)
+        setEditingServer(null)
+      } catch {
+        // error handled by store
       }
-      setShowAddServer(false)
-      setEditingServer(null)
     },
     [editingServer, addCustomServer, editServer]
   )
@@ -49,7 +63,7 @@ export function ServersPage() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <DnsServerList
         onEdit={handleEdit}
         onAdd={() => setShowAddServer(true)}
@@ -77,16 +91,19 @@ export function ServersPage() {
           <p className="text-sm text-text-secondary">
             {deleteTarget && t('common.confirm_delete', { name: deleteTarget.name })}
           </p>
+          {deleteError && (
+            <p className="text-xs text-danger">{deleteError}</p>
+          )}
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <Button variant={ButtonVariant.SECONDARY} onClick={() => setDeleteTarget(null)}>
+            <Button variant={ButtonVariant.SECONDARY} onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
               {t('common.cancel')}
             </Button>
-            <Button variant={ButtonVariant.DANGER} onClick={handleDeleteConfirm}>
+            <Button variant={ButtonVariant.DANGER} onClick={handleDeleteConfirm} isLoading={isDeleting}>
               {t('common.delete')}
             </Button>
           </div>
         </div>
       </Modal>
-    </>
+    </ErrorBoundary>
   )
 }

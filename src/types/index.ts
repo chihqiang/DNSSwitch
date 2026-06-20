@@ -40,4 +40,8 @@ export type {
 export type {
   RequestLogEntry,
 } from './requestLog'
+
+export type {
+  DnsHealthEvent,
+} from './health'
 export { NetworkInterfaceType } from './system'

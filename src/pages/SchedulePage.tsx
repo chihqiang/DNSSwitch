@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SchedulePanel } from '@/components/Schedule'
 import { AddRuleForm } from '@/components/AddRuleForm'
-import { Modal, Button, ButtonVariant } from '@/components/common'
+import { Modal, Button, ButtonVariant, ErrorBoundary } from '@/components/common'
 import { useConfigStore } from '@/stores'
 import type { ScheduleRule } from '@/types'
 
@@ -11,6 +11,8 @@ export function SchedulePage() {
   const [editingRule, setEditingRule] = useState<ScheduleRule | null>(null)
   const [showAddRule, setShowAddRule] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const { addScheduleRule, updateScheduleRule, removeScheduleRule } = useConfigStore()
 
   const handleEdit = (rule: ScheduleRule) => {
@@ -18,10 +20,18 @@ export function SchedulePage() {
     setShowAddRule(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return
-    removeScheduleRule(deleteTarget.id)
-    setDeleteTarget(null)
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await removeScheduleRule(deleteTarget.id)
+      setDeleteTarget(null)
+    } catch (e) {
+      setDeleteError(String(e))
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleFormSubmit = useCallback(
@@ -49,7 +59,7 @@ export function SchedulePage() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <SchedulePanel
         onAdd={() => setShowAddRule(true)}
         onEdit={handleEdit}
@@ -77,16 +87,17 @@ export function SchedulePage() {
           <p className="text-sm text-text-secondary">
             {deleteTarget && t('common.confirm_delete', { name: deleteTarget.name })}
           </p>
+          {deleteError && <p className="text-xs text-danger">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <Button variant={ButtonVariant.SECONDARY} onClick={() => setDeleteTarget(null)}>
+            <Button variant={ButtonVariant.SECONDARY} onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
               {t('common.cancel')}
             </Button>
-            <Button variant={ButtonVariant.DANGER} onClick={handleDeleteConfirm}>
+            <Button variant={ButtonVariant.DANGER} onClick={handleDeleteConfirm} isLoading={isDeleting}>
               {t('common.delete')}
             </Button>
           </div>
         </div>
       </Modal>
-    </>
+    </ErrorBoundary>
   )
 }
