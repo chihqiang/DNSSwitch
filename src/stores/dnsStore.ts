@@ -35,6 +35,7 @@ interface DnsState {
   removeServer: (id: string) => void;
   updateServer: (id: string, updates: Partial<DnsServer>) => void;
   setActiveServer: (id: string) => void;
+  clearActive: () => void;
   setLatencyTests: (tests: DnsLatencyTest[]) => void;
   addLatencyTest: (test: DnsLatencyTest) => void;
   setLastLeakResult: (result: DnsLeakResult | null) => void;
@@ -78,6 +79,15 @@ export const useDnsStore = create<DnsState>((set) => ({
         ...s,
         isActive: s.id === id,
         updatedAt: s.id === id ? Date.now() : s.updatedAt,
+      })),
+    })),
+
+  /** 清除所有服务器的活跃状态（恢复为系统 DNS 时使用） */
+  clearActive: () =>
+    set((state) => ({
+      servers: state.servers.map((s) => ({
+        ...s,
+        isActive: false,
       })),
     })),
 

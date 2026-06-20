@@ -30,12 +30,24 @@ export function useDnsStatus() {
   } = useDnsStore();
   const { servers } = useDnsServers();
 
-  /** 从系统获取当前 DNS 状态 */
+  /** 从系统获取当前 DNS 状态，并匹配服务器列表推断当前活跃服务器 */
   const fetchStatus = useCallback(async () => {
     try {
       const status = await invoke<DnsStatus>('get_current_dns');
       setCurrentStatus(status);
       setError(null);
+      // 根据系统 DNS 地址匹配活跃服务器
+      const allServers = useDnsStore.getState().servers;
+      if (status.isCustom && status.currentServers.length > 0) {
+        const sorted = [...status.currentServers].sort();
+        const match = allServers.find((s) => {
+          const addrs = [...s.addresses].sort();
+          return addrs.length === sorted.length && addrs.every((a, i) => a === sorted[i]);
+        });
+        if (match) {
+          useDnsStore.getState().setActiveServer(match.id);
+        }
+      }
     } catch (e) {
       setError(String(e));
     }
@@ -62,6 +74,8 @@ export function useDnsStatus() {
           addresses: server.addresses,
         });
         logger.info(`Switched to ${server.name} (${server.addresses.join(', ')})`);
+        // 更新 UI 活跃状态
+        useDnsStore.getState().setActiveServer(serverId);
         // 刷新状态
         await fetchStatus();
         // 检测 DNS 泄露
@@ -88,6 +102,7 @@ export function useDnsStatus() {
     try {
       logger.info('Reset to system DNS');
       await invoke('reset_system_dns');
+      useDnsStore.getState().clearActive();
       await fetchStatus();
     } catch (e) {
       logger.error(`Failed to reset DNS: ${e}`);

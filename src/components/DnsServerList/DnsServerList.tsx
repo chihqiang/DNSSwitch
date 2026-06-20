@@ -18,7 +18,7 @@ interface DnsServerListProps {
 export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
   const { t } = useTranslation();
   const { isSwitching, isTesting, switchingServerId, testingServerId, switchDns, testLatency } = useDnsStatus();
-  const { servers, refreshLatency } = useDnsServers();
+  const { servers, refreshLatency, resetToSystem } = useDnsServers();
 
   async function handleSwitch(id: string) {
     await switchDns(id);
@@ -34,9 +34,14 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         <h2 className="text-sm font-semibold">{t('server.title')}</h2>
         <div className="flex gap-2">
           {servers.length > 0 && (
-            <Button variant={ButtonVariant.GHOST} size="sm" onClick={refreshLatency}>
-              {t('server.refresh_latency')}
-            </Button>
+            <>
+              <Button variant={ButtonVariant.GHOST} size="sm" onClick={resetToSystem}>
+                {t('server.reset_system')}
+              </Button>
+              <Button variant={ButtonVariant.GHOST} size="sm" onClick={refreshLatency}>
+                {t('server.refresh_latency')}
+              </Button>
+            </>
           )}
           <Button variant={ButtonVariant.PRIMARY} size="sm" onClick={onAdd}>
             {t('server.add_server')}

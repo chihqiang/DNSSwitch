@@ -22,6 +22,9 @@ pub const THEME_MODE_SYSTEM: &str = "system";
 pub struct AppConfig {
     pub version: u32,
     pub servers: Vec<DnsServer>,
+    /// 当前激活的 DNS 服务器 ID（None 表示使用系统默认 DNS）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_server_id: Option<String>,
     pub schedule: ScheduleConfig,
     pub settings: AppSettings,
     pub theme: ThemeConfig,
@@ -121,6 +124,7 @@ impl Default for AppConfig {
         Self {
             version: CONFIG_VERSION,
             servers: Vec::new(),
+            active_server_id: None,
             schedule: ScheduleConfig {
                 enabled: false,
                 rules: Vec::new(),

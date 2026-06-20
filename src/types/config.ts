@@ -27,6 +27,8 @@ export type ScheduleConditionType = (typeof ScheduleConditionType)[keyof typeof 
 export interface AppConfig {
   version: number;
   servers: DnsServer[];
+  /** 当前激活的 DNS 服务器 ID（undefined 表示使用系统默认） */
+  activeServerId?: string;
   schedule: ScheduleConfig;
   settings: AppSettings;
   theme: ThemeConfig;

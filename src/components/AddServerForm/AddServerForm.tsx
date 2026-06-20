@@ -7,7 +7,6 @@ import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import type { DnsServer, DnsLatencyTest } from '@/types';
-import { DnsProviderKey, DnsProviderInfo } from '@/types';
 import { Button, ButtonVariant } from '@/components/common';
 import { inputClass, LABEL_CLASS, ERROR_CLASS } from '@/components/common/forms';
 
@@ -110,7 +109,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
       id: editingServer?.id ?? `custom-${now}`,
       name: name.trim(),
       addresses,
-      provider: editingServer?.provider ?? DnsProviderInfo[DnsProviderKey.CUSTOM],
+      provider: editingServer?.provider ?? { name: 'custom', displayName: 'Custom', description: 'Custom DNS server' },
       isActive: editingServer?.isActive ?? false,
       isSystem: editingServer?.isSystem ?? false,
       tags: [],

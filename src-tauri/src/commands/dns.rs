@@ -56,6 +56,11 @@ pub fn switch_dns_inner(
     match system_dns::switch_to_dns(&server_id, &addresses) {
         Ok(()) => {
             log::info!("[dns] Switched to {} ({})", server_name, addresses.join(", "));
+            // 持久化活跃服务器 ID
+            if let Ok(mut config) = crate::config::load_config() {
+                config.active_server_id = Some(server_id.clone());
+                let _ = crate::config::save_config(&config);
+            }
             let latency = addresses.first().and_then(|addr| resolver::measure_latency(addr).ok());
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
@@ -109,6 +114,11 @@ pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), Strin
     match system_dns::reset_to_system_dns() {
         Ok(()) => {
             log::info!("[dns] Reset to system DNS");
+            // 清除持久化的活跃服务器 ID
+            if let Ok(mut config) = crate::config::load_config() {
+                config.active_server_id = None;
+                let _ = crate::config::save_config(&config);
+            }
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
                 event_type: "reset".to_string(),

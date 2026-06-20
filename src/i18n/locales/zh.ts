@@ -41,6 +41,7 @@ export default {
   server: {
     title: 'DNS 服务器',
     refresh_latency: '刷新延迟',
+    reset_system: '恢复系统 DNS',
     add_server: '添加服务器',
     add_title: '添加 DNS 服务器',
     edit_title: '编辑 DNS 服务器',

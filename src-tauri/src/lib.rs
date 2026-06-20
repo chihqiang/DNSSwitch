@@ -140,6 +140,11 @@ pub fn run() {
             commands::dns::resolve_dns_dot,
             commands::dns::test_doh_connectivity,
             commands::dns::test_dot_connectivity,
+            dns::provider::get_provider_registry,
+            dns::provider::add_server_to_registry,
+            dns::provider::update_server_in_registry,
+            dns::provider::delete_server_from_registry,
+            dns::provider::reset_provider_registry,
             commands::schedule::get_schedule_status,
             commands::schedule::set_schedule_enabled,
         ])

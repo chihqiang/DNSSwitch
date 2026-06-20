@@ -41,6 +41,7 @@ export default {
   server: {
     title: 'DNS Servers',
     refresh_latency: 'Refresh Latency',
+    reset_system: 'Reset System DNS',
     add_server: 'Add Server',
     add_title: 'Add DNS Server',
     edit_title: 'Edit DNS Server',
