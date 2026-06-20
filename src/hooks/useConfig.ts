@@ -5,6 +5,7 @@
 
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { logger } from '@/lib/log';
 import { useConfigStore } from '@/stores';
 import type { AppConfig } from '@/types';
 
@@ -16,8 +17,10 @@ export function useConfig() {
     try {
       const result = await invoke<AppConfig>('load_config');
       setConfig(result);
+      logger.info(`Configuration loaded (${result.servers.length} servers, ${result.schedule.rules.length} rules)`);
       setError(null);
     } catch (e) {
+      logger.error(`Failed to load configuration: ${e}`);
       setError(String(e));
     } finally {
       setIsLoaded(true);
@@ -32,6 +35,7 @@ export function useConfig() {
       await invoke('save_config', { config });
       setError(null);
     } catch (e) {
+      logger.error(`Failed to save configuration: ${e}`);
       setError(String(e));
     } finally {
       setIsSaving(false);

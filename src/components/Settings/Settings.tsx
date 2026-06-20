@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { enable as enableAutostart, disable as disableAutostart } from '@tauri-apps/plugin-autostart';
+import { logger } from '@/lib/log';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore } from '@/stores';
 import { ThemeMode, type AppConfig } from '@/types';
@@ -142,7 +143,7 @@ export function Settings({ onSave }: SettingsProps) {
                     await disableAutostart();
                   }
                 } catch (err) {
-                  console.error('Failed to toggle autostart:', err);
+                  logger.error(`Failed to toggle autostart: ${err}`);
                 }
               }}
             />

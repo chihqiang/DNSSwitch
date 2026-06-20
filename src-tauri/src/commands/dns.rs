@@ -55,6 +55,7 @@ pub fn switch_dns_inner(
 ) -> Result<(), String> {
     match system_dns::switch_to_dns(&server_id, &addresses) {
         Ok(()) => {
+            log::info!("[dns] Switched to {} ({})", server_name, addresses.join(", "));
             let latency = addresses.first().and_then(|addr| resolver::measure_latency(addr).ok());
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
@@ -71,6 +72,7 @@ pub fn switch_dns_inner(
             Ok(())
         }
         Err(e) => {
+            log::error!("[dns] Failed to switch to {}: {}", server_name, e.message);
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
                 event_type: "switch".to_string(),
@@ -106,6 +108,7 @@ pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
 pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), String> {
     match system_dns::reset_to_system_dns() {
         Ok(()) => {
+            log::info!("[dns] Reset to system DNS");
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
                 event_type: "reset".to_string(),
@@ -121,6 +124,7 @@ pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), Strin
             Ok(())
         }
         Err(e) => {
+            log::error!("[dns] Failed to reset DNS: {}", e.message);
             let _ = history::add_event(DnsEvent {
                 id: new_id(),
                 event_type: "reset".to_string(),
@@ -171,6 +175,7 @@ pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, 
     };
 
     let detail = if !matched {
+        log::warn!("[dns] DNS leak detected: expected={}, actual={}", expected_sorted.join(", "), if actual_sorted.is_empty() { "system default (DHCP)".to_string() } else { actual_sorted.join(", ") });
         format!(
             "Leak detected! System is using: {}. Expected: {}",
             if actual_sorted.is_empty() { "system default (DHCP)".to_string() } else { actual_sorted.join(", ") },
@@ -207,27 +212,35 @@ pub fn clear_history() -> Result<(), String> {
 /// 通过指定 DNS 服务器解析域名（UDP 53 端口）
 #[tauri::command(rename_all = "camelCase")]
 pub fn resolve_dns(domain: String, record_type: String, address: String) -> Result<query::DnsQueryResult, String> {
-    query::resolve(&domain, &record_type, &address).map_err(|e| e.message)
+    query::resolve(&domain, &record_type, &address)
+        .inspect_err(|e| log::error!("[dns] UDP resolve {} ({}) via {}: {}", domain, record_type, address, e.message))
+        .map_err(|e| e.message)
 }
 
 /// 测试指定 DNS 服务器的延迟
 #[tauri::command(rename_all = "camelCase")]
 pub fn test_dns_latency(server_id: String, address: String) -> Result<DnsLatencyResult, String> {
     match resolver::measure_latency(&address) {
-        Ok(latency_ms) => Ok(DnsLatencyResult {
-            server_id,
-            address,
-            latency_ms,
-            success: true,
-            error: None,
-        }),
-        Err(e) => Ok(DnsLatencyResult {
-            server_id,
-            address,
-            latency_ms: f64::default(),
-            success: false,
-            error: Some(e.message),
-        }),
+        Ok(latency_ms) => {
+            log::debug!("[dns] Latency test {}: {:.2}ms", address, latency_ms);
+            Ok(DnsLatencyResult {
+                server_id,
+                address,
+                latency_ms,
+                success: true,
+                error: None,
+            })
+        }
+        Err(e) => {
+            log::warn!("[dns] Latency test {} failed: {}", address, e.message);
+            Ok(DnsLatencyResult {
+                server_id,
+                address,
+                latency_ms: f64::default(),
+                success: false,
+                error: Some(e.message),
+            })
+        }
     }
 }
 
@@ -236,23 +249,31 @@ pub fn test_dns_latency(server_id: String, address: String) -> Result<DnsLatency
 pub async fn resolve_dns_doh(domain: String, record_type: String, doh_url: String) -> Result<query::DnsQueryResult, String> {
     doh::resolve_via_doh(&domain, &record_type, &doh_url)
         .await
+        .inspect_err(|e| log::error!("[dns] DoH resolve {} ({}) via {}: {}", domain, record_type, doh_url, e.message))
         .map_err(|e| e.message)
 }
 
 /// 通过 DNS-over-TLS 解析域名
 #[tauri::command(rename_all = "camelCase")]
 pub fn resolve_dns_dot(domain: String, record_type: String, dot_address: String) -> Result<query::DnsQueryResult, String> {
-    dot::resolve_via_dot(&domain, &record_type, &dot_address).map_err(|e| e.message)
+    dot::resolve_via_dot(&domain, &record_type, &dot_address)
+        .inspect_err(|e| log::error!("[dns] DoT resolve {} ({}) via {}: {}", domain, record_type, dot_address, e.message))
+        .map_err(|e| e.message)
 }
 
 /// 测试 DoH 服务器连通性
 #[tauri::command(rename_all = "camelCase")]
 pub async fn test_doh_connectivity(doh_url: String) -> Result<f64, String> {
-    doh::test_doh_connectivity(&doh_url).await.map_err(|e| e.message)
+    doh::test_doh_connectivity(&doh_url)
+        .await
+        .inspect_err(|e| log::warn!("[dns] DoH connectivity test {}: {}", doh_url, e.message))
+        .map_err(|e| e.message)
 }
 
 /// 测试 DoT 服务器连通性
 #[tauri::command(rename_all = "camelCase")]
 pub fn test_dot_connectivity(dot_address: String) -> Result<f64, String> {
-    dot::test_dot_connectivity(&dot_address).map_err(|e| e.message)
+    dot::test_dot_connectivity(&dot_address)
+        .inspect_err(|e| log::warn!("[dns] DoT connectivity test {}: {}", dot_address, e.message))
+        .map_err(|e| e.message)
 }

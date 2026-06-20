@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { logger } from '@/lib/log';
 import i18n from '@/i18n';
 import { useDnsStore } from '@/stores';
 import { useDnsServers } from './useDnsServers';
@@ -60,6 +61,7 @@ export function useDnsStatus() {
           serverName: server.name,
           addresses: server.addresses,
         });
+        logger.info(`Switched to ${server.name} (${server.addresses.join(', ')})`);
         // 刷新状态
         await fetchStatus();
         // 检测 DNS 泄露
@@ -68,6 +70,7 @@ export function useDnsStatus() {
         });
         setLastLeakResult(leak);
       } catch (e) {
+        logger.error(`Failed to switch DNS to ${server.name}: ${e}`);
         setError(String(e));
       } finally {
         setIsSwitching(false);
@@ -83,9 +86,11 @@ export function useDnsStatus() {
     setError(null);
     setLastLeakResult(null);
     try {
+      logger.info('Reset to system DNS');
       await invoke('reset_system_dns');
       await fetchStatus();
     } catch (e) {
+      logger.error(`Failed to reset DNS: ${e}`);
       setError(String(e));
     } finally {
       setIsSwitching(false);
@@ -117,6 +122,7 @@ export function useDnsStatus() {
         }
         return result;
       } catch (e) {
+        logger.error(`Failed to test latency for ${server.name}: ${e}`);
         setError(String(e));
         return null;
       } finally {

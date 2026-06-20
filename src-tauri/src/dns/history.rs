@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::config;
 use crate::error::AppError;
 
 /// DNS 操作事件记录
@@ -28,9 +29,7 @@ pub struct DnsEvent {
 
 /// 获取历史记录文件路径：~/.dnsswitch/history.json
 fn history_path() -> Result<PathBuf, AppError> {
-    let home = std::env::var("HOME")
-        .map_err(|_| AppError::new("Cannot determine home directory"))?;
-    Ok(PathBuf::from(home).join(".dnsswitch").join("history.json"))
+    Ok(config::data_dir()?.join("history.json"))
 }
 
 /// 加载全部历史事件
@@ -39,8 +38,15 @@ pub fn load_history() -> Result<Vec<DnsEvent>, AppError> {
     if !path.exists() {
         return Ok(Vec::new());
     }
-    let content = fs::read_to_string(&path)?;
-    let events: Vec<DnsEvent> = serde_json::from_str(&content)?;
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(e) => {
+            log::error!("[history] Failed to read history file: {}", e);
+            return Err(AppError::new(e.to_string()));
+        }
+    };
+    let events: Vec<DnsEvent> = serde_json::from_str(&content)
+        .inspect_err(|e| log::error!("[history] Failed to parse history: {}", e))?;
     Ok(events)
 }
 
@@ -59,6 +65,7 @@ pub fn save_history(events: &[DnsEvent]) -> Result<(), AppError> {
         fs::create_dir_all(parent)?;
     }
     let content = serde_json::to_string_pretty(events)?;
-    fs::write(&path, content)?;
+    fs::write(&path, content)
+        .inspect_err(|e| log::error!("[history] Failed to write history: {}", e))?;
     Ok(())
 }

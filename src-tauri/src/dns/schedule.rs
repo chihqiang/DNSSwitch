@@ -91,6 +91,7 @@ fn evaluate_rules(
         }
 
         let addresses: Vec<String> = target.addresses.clone();
+        log::info!("[schedule] Rule \"{}\" matched, switching to {}", rule.name, target.name);
         match system_dns::switch_to_dns(&target.id, &addresses) {
             Ok(()) => {
                 // 记录到历史
@@ -125,6 +126,7 @@ fn evaluate_rules(
                 );
             }
             Err(e) => {
+                log::error!("[schedule] Rule \"{}\" switch failed: {}", rule.name, e.message);
                 let _ = app_handle.emit(
                     "schedule-event",
                     ScheduleEvent {

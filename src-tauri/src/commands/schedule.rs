@@ -33,5 +33,6 @@ pub fn set_schedule_enabled(enabled: bool) -> Result<(), String> {
     let mut config = config::load_config().map_err(|e| e.message)?;
     config.schedule.enabled = enabled;
     config::save_config(&config).map_err(|e| e.message)?;
+    log::info!("[schedule] Scheduler {}", if enabled { "enabled" } else { "disabled" });
     Ok(())
 }

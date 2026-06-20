@@ -45,7 +45,9 @@ pub struct NetworkService {
 #[tauri::command]
 pub fn get_system_info() -> Result<SystemInfo, String> {
     let os = std::env::consts::OS.to_string();
-    let hostname = get_hostname().map_err(|e| format!("Failed to get hostname: {}", e))?;
+    let hostname = get_hostname()
+        .inspect_err(|e| log::error!("[system] Failed to get hostname: {}", e))
+        .map_err(|e| format!("Failed to get hostname: {}", e))?;
     let os_version = get_os_version();
     let kernel_version = get_kernel_version();
 

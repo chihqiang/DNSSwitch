@@ -11,6 +11,8 @@ use crate::dns::types::DnsServer;
 const CONFIG_VERSION: u32 = 1;
 /// 默认延迟检查间隔（60 秒）
 const DEFAULT_LATENCY_CHECK_INTERVAL_MS: u64 = 60000;
+/// 应用数据目录名（位于用户 HOME 下）
+pub const DATA_DIR: &str = ".dnsswitch";
 /// 主题模式常量
 pub const THEME_MODE_SYSTEM: &str = "system";
 

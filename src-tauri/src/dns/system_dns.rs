@@ -37,11 +37,21 @@ pub fn get_current_dns_status() -> Result<DnsStatus, AppError> {
     let output = Command::new(CMD_SCUTIL)
         .arg(ARG_DNS)
         .output()
-        .map_err(|e| AppError::new(format!("Failed to run scutil: {}", e)))?;
+        .map_err(|e| {
+            let err = format!("Failed to run scutil: {}", e);
+            log::error!("[dns] {}", err);
+            AppError::new(err)
+        })?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let dns_servers = parse_scutil_dns_output(&stdout);
-    let network_service = detect_active_network_service()?;
+    let network_service = match detect_active_network_service() {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!("[dns] No active network service: {}", e.message);
+            return Err(e);
+        }
+    };
     let is_custom = !dns_servers.is_empty();
 
     Ok(DnsStatus {
@@ -70,8 +80,10 @@ fn run_networksetup_with_privileges(script: &str) -> Result<(), AppError> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let msg = stderr.trim();
         if msg.contains("User canceled") || msg.contains("Authorization cancelled") {
+            log::info!("[dns] DNS operation cancelled by user");
             return Err(AppError::new("Operation cancelled by user"));
         }
+        log::error!("[dns] networksetup failed: {}", msg);
         return Err(AppError::new(format!("Failed to set DNS: {}", msg)));
     }
 
@@ -83,6 +95,7 @@ pub fn switch_to_dns(_server_id: &str, addresses: &[String]) -> Result<(), AppEr
     let service_name = detect_active_network_service()?;
 
     if addresses.is_empty() {
+        log::error!("[dns] {}", ERR_NO_ADDRESSES);
         return Err(AppError::new(ERR_NO_ADDRESSES));
     }
 
@@ -98,6 +111,7 @@ pub fn switch_to_dns(_server_id: &str, addresses: &[String]) -> Result<(), AppEr
         CMD_NETWORKSETUP, ARG_SET_DNS_SERVERS, escaped_service, addr_str
     );
 
+    log::info!("[dns] Running: networksetup -setdnsservers \"{}\" {}", service_name, addr_str);
     run_networksetup_with_privileges(&script)
 }
 

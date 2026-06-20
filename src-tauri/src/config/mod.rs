@@ -10,13 +10,18 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::error::AppError;
-use types::AppConfig;
+use types::{AppConfig, DATA_DIR};
+
+/// 获取应用数据目录路径：~/.dnsswitch
+pub fn data_dir() -> Result<PathBuf, AppError> {
+    let home = std::env::var("HOME")
+        .map_err(|_| AppError::new("Cannot determine home directory"))?;
+    Ok(PathBuf::from(home).join(DATA_DIR))
+}
 
 /// 获取配置文件路径：~/.dnsswitch/config.json
 fn config_path() -> Result<PathBuf, AppError> {
-    let home = std::env::var("HOME")
-        .map_err(|_| AppError::new("Cannot determine home directory"))?;
-    Ok(PathBuf::from(home).join(".dnsswitch").join("config.json"))
+    Ok(data_dir()?.join("config.json"))
 }
 
 /// 加载配置，文件不存在时自动创建默认配置
@@ -43,6 +48,7 @@ pub fn save_config(config: &AppConfig) -> Result<(), AppError> {
     }
 
     let content = serde_json::to_string_pretty(config)?;
-    fs::write(&path, content)?;
+    fs::write(&path, content)
+        .inspect_err(|e| log::error!("[config] Failed to save config: {}", e))?;
     Ok(())
 }

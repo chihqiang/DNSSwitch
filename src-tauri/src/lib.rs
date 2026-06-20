@@ -8,6 +8,7 @@ mod commands;
 mod config;
 mod dns;
 mod error;
+mod logger;
 
 use std::sync::OnceLock;
 
@@ -22,6 +23,40 @@ static TRAY: OnceLock<TrayIcon<tauri::Wry>> = OnceLock::new();
 /// 应用主入口：配置 Tauri Builder、注册插件、启动监控和调度引擎
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化日志系统：stdout + 按日轮转文件
+    let log_dir = config::data_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join("log");
+    std::fs::create_dir_all(&log_dir).ok();
+
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let log_file = log_dir.join(format!("{}.log", today));
+
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{} [{}] {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                record.level(),
+                message,
+            ))
+        })
+        .level(log::LevelFilter::Debug)
+        .chain(std::io::stdout())
+        .chain(match fern::log_file(&log_file) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!("Warning: failed to open {}: {}", log_file.display(), e);
+                return;
+            }
+        })
+        .apply()
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: failed to initialize logger: {}", e);
+        });
+
+    log::info!("dnsswitch starting");
+
     tauri::Builder::default()
         // 文件/URL 打开插件
         .plugin(tauri_plugin_opener::init())
@@ -85,6 +120,7 @@ pub fn run() {
         })
         // 注册所有 Tauri 命令处理器（供前端 invoke 调用）
         .invoke_handler(tauri::generate_handler![
+            logger::log_message,
             commands::dns::get_current_dns,
             commands::dns::switch_dns,
             commands::dns::reset_system_dns,
@@ -163,7 +199,7 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
         }
         "reset_dns" => {
             if let Err(e) = commands::dns::reset_system_dns_inner(app) {
-                eprintln!("Failed to reset DNS: {}", e);
+                log::error!("[tray] Failed to reset DNS: {}", e);
             }
         }
         // 切换 DNS 菜单项：id 格式为 "switch_{server_id}"
@@ -177,7 +213,7 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
                         server.name.clone(),
                         server.addresses.clone(),
                     ) {
-                        eprintln!("Failed to switch DNS: {}", e);
+                        log::error!("[tray] Failed to switch DNS: {}", e);
                     }
                 }
             }

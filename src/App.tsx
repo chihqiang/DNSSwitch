@@ -6,6 +6,7 @@
 import { Suspense, useEffect, useCallback } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { listen } from '@tauri-apps/api/event';
+import { logger } from '@/lib/log';
 import { Layout } from '@/components/Layout/Layout';
 import { ServersPage } from '@/pages/ServersPage';
 import { QueryPage } from '@/pages/QueryPage';
@@ -28,6 +29,7 @@ function AppContent() {
   // 应用启动时加载配置
   useEffect(() => {
     loadConfig();
+    logger.info('DNSSwitch UI started');
   }, [loadConfig]);
 
   // 监听 DNS 健康检查事件（Rust 后端推送）

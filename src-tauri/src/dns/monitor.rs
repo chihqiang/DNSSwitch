@@ -63,6 +63,10 @@ pub fn spawn_monitor(app_handle: tauri::AppHandle) {
                             .unwrap_or_default();
                         let leak = !actual.is_empty() && !actual.contains(&addr);
 
+                        if leak {
+                            log::warn!("[monitor] DNS leak: expected={}, actual={}", addr, actual.join(", "));
+                        }
+
                         match (&latency, &resolved) {
                             // DNS 可达且解析正常
                             (Ok(lat), Ok(_)) => DnsHealthEvent {
@@ -86,6 +90,7 @@ pub fn spawn_monitor(app_handle: tauri::AppHandle) {
                                     .or_else(|| resolved.as_ref().err())
                                     .map(|e| e.message.clone())
                                     .unwrap_or_default();
+                                log::warn!("[monitor] Health check failed for {}: {}", server.name, err_msg);
                                 DnsHealthEvent {
                                     healthy: false,
                                     latency_ms: latency.as_ref().unwrap_or(&0.0).to_owned(),
