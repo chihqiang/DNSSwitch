@@ -60,6 +60,8 @@ export default {
     no_addresses: '没有可测试的地址',
     empty_title: '没有 DNS 服务器',
     empty_desc: '添加自定义 DNS 服务器，或使用上方预设列表。',
+    no_ip_hint: '未配置 IP 地址，无法切换系统 DNS',
+    no_ip_form_hint: '系统 DNS 切换需要 IP 地址，DoH/DoT 只能用于查询。不带 IP 的服务器无法切换。',
   },
   dns_provider: {
     system: '系统默认',

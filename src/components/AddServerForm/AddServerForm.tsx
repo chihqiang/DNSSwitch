@@ -192,6 +192,13 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         <span className="text-xs text-text-muted">{t('server.dot_hint')}</span>
       </div>
 
+      {/* 只有 DoH/DoT 没有 IP 时提示 */}
+      {!hasAddr && (hasDoh || hasDot) && (
+        <div className="px-3 py-2 bg-warning-bg text-warning border border-warning/20 rounded text-xs">
+          {t('server.no_ip_form_hint')}
+        </div>
+      )}
+
       {/* 延迟预测试结果 */}
       {testResult && (
         <div

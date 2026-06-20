@@ -60,6 +60,8 @@ export default {
     no_addresses: 'No addresses to test',
     empty_title: 'No DNS Servers',
     empty_desc: 'Add a custom DNS server or use the preset list above.',
+    no_ip_hint: 'No IP configured, cannot switch system DNS',
+    no_ip_form_hint: 'System DNS switching requires IP addresses. DoH/DoT are for queries only. Servers without IPs cannot be set as system DNS.',
   },
   dns_provider: {
     system: 'System Default',

@@ -76,7 +76,7 @@ export const DnsServerCard = memo(function DnsServerCard({
 
       {/* 操作按钮 */}
       <div className="flex gap-1.5 pt-3 border-t border-border">
-        {!server.isActive && (
+        {!server.isActive && server.addresses.length > 0 && (
           <Button
             variant={ButtonVariant.PRIMARY}
             size="sm"
@@ -86,6 +86,9 @@ export const DnsServerCard = memo(function DnsServerCard({
           >
             {t('common.switch')}
           </Button>
+        )}
+        {!server.isActive && server.addresses.length === 0 && (
+          <span className="text-xs text-text-muted self-center">{t('server.no_ip_hint')}</span>
         )}
         <Button
           variant={ButtonVariant.GHOST}
