@@ -12,4 +12,3 @@ pub mod monitor;
 pub mod doh;
 pub mod dot;
 pub mod provider;
-pub mod schedule;

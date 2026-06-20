@@ -111,27 +111,24 @@ export function useDnsServers() {
     }
   }, []);
 
-  /** 刷新所有服务器的延迟数据 */
+  /** 刷新所有服务器的延迟数据（Rust 端并行，一次 IPC） */
   const refreshLatency = useCallback(async () => {
     const currentServers = useDnsStore.getState().servers;
-    const results = await Promise.allSettled(
-      currentServers
-        .filter((s) => s.addresses.length > 0)
-        .map((server) =>
-          invoke<DnsLatencyTest>('test_dns_latency', {
-            serverId: server.id,
-            address: server.addresses[0],
-          }),
-        ),
-    );
-    const { updateServer, addLatencyTest } = useDnsStore.getState();
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.success) {
-        updateServer(result.value.serverId, {
-          latency: result.value.latencyMs,
-        });
-        addLatencyTest(result.value);
+    const inputs = currentServers
+      .filter((s) => s.addresses.length > 0)
+      .map((s) => ({ serverId: s.id, address: s.addresses[0] }));
+    if (inputs.length === 0) return;
+    try {
+      const results = await invoke<DnsLatencyTest[]>('test_all_dns_latency', { servers: inputs });
+      const { updateServer, addLatencyTest } = useDnsStore.getState();
+      for (const r of results) {
+        if (r.success) {
+          updateServer(r.serverId, { latency: r.latencyMs });
+        }
+        addLatencyTest(r);
       }
+    } catch (e) {
+      logger.error(`Failed to refresh latency: ${e}`);
     }
   }, []);
 
@@ -153,14 +150,6 @@ export function useDnsServers() {
   useEffect(() => {
     if (isLoaded) loadServers();
   }, [isLoaded, loadServers]);
-
-  // 按配置的间隔定时刷新延迟
-  const latencyCheckInterval = useConfigStore((s) => s.config.settings.latencyCheckInterval);
-  useEffect(() => {
-    if (!isLoaded || !latencyCheckInterval) return;
-    const id = setInterval(refreshLatency, latencyCheckInterval);
-    return () => clearInterval(id);
-  }, [isLoaded, latencyCheckInterval, refreshLatency]);
 
   return {
     servers,

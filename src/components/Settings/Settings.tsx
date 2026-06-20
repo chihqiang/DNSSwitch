@@ -1,6 +1,6 @@
 // ============================================================
 // Settings 设置面板组件
-// 包含常规设置、系统信息、历史记录、工具（导入/导出）四个标签页
+// 包含常规设置、系统信息、工具（导入/导出）三个标签页
 // ============================================================
 
 import { useState, useCallback } from 'react';
@@ -13,7 +13,6 @@ import { useConfigStore } from '@/stores';
 import { ThemeMode, type AppConfig } from '@/types';
 import { useSystemInfo } from '@/hooks';
 import { Card, Button, ButtonVariant, LoadingSpinner } from '@/components/common';
-import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
 import { LATENCY_CHECK_INTERVAL_MIN_S, LATENCY_CHECK_INTERVAL_MAX_S } from '@/constants';
 
 interface SettingsProps {
@@ -37,7 +36,6 @@ const THEME_OPTIONS = [
 const TABS = [
   { key: 'general', labelKey: 'settings.general' },
   { key: 'system', labelKey: 'settings.system_info' },
-  { key: 'history', labelKey: 'history.title' },
   { key: 'tools', labelKey: 'settings.tools' },
 ] as const;
 
@@ -309,10 +307,6 @@ export function Settings({ onSave }: SettingsProps) {
     </div>
   );
 
-  // ---- 历史记录标签页 ----
-
-  const historyTab = <HistoryPanel />;
-
   // ---- 工具标签页 ----
 
   const toolsTab = (
@@ -333,7 +327,6 @@ export function Settings({ onSave }: SettingsProps) {
   const tabContent: Record<TabKey, React.ReactNode> = {
     general: generalTab,
     system: systemTab,
-    history: historyTab,
     tools: toolsTab,
   };
 

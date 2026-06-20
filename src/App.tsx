@@ -1,30 +1,26 @@
 // ============================================================
 // App 根组件
-// 负责：配置加载、Tauri 事件监听（健康检查/调度事件）、路由、Toast 通知
+// 负责：配置加载、Tauri 事件监听（健康检查/延迟更新）、路由、Toast 通知
 // ============================================================
 
-import { Suspense, useEffect, useCallback } from 'react';
+import { Suspense, useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { listen } from '@tauri-apps/api/event';
 import { logger } from '@/lib/log';
 import { Layout } from '@/components/Layout/Layout';
 import { ServersPage } from '@/pages/ServersPage';
 import { QueryPage } from '@/pages/QueryPage';
-import { SchedulePage } from '@/pages/SchedulePage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { LogPage } from '@/pages/LogPage';
 import { StatusBar } from '@/components/StatusBar';
 import { ErrorBoundary, LoadingSpinner } from '@/components/common';
 import { useConfig } from '@/hooks';
-import { useDnsStore, useScheduleStore } from '@/stores';
-import type { DnsHealthEvent, ScheduleEventPayload } from '@/types';
+import { useDnsStore } from '@/stores';
+import type { DnsHealthEvent, DnsLatencyUpdate } from '@/types';
 
 function AppContent() {
   const { loadConfig } = useConfig();
   const setHealthStatus = useDnsStore((s) => s.setHealthStatus);
-  const showToast = useScheduleStore((s) => s.showToast);
-  const toast = useScheduleStore((s) => s.toast);
-  const clearToast = useScheduleStore((s) => s.clearToast);
 
   // 应用启动时加载配置
   useEffect(() => {
@@ -42,20 +38,26 @@ function AppContent() {
     };
   }, [setHealthStatus]);
 
-  // 监听调度事件（Rust 后端推送）
+  // 监听全部服务器延迟更新（Rust monitor 推送，替代前端轮询）
   useEffect(() => {
-    const unlisten = listen<ScheduleEventPayload>('schedule-event', (event) => {
-      showToast(event.payload);
+    const unlisten = listen<DnsLatencyUpdate>('dns-latency-changed', (event) => {
+      const { updateServer, addLatencyTest } = useDnsStore.getState();
+      for (const r of event.payload.results) {
+        if (r.success) {
+          updateServer(r.serverId, { latency: r.latencyMs });
+        }
+        addLatencyTest({
+          serverId: r.serverId,
+          address: '',
+          latencyMs: r.latencyMs,
+          success: r.success,
+        });
+      }
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [showToast]);
-
-  /** 点击 Toast 关闭 */
-  const handleToastClick = useCallback(() => {
-    clearToast();
-  }, [clearToast]);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -63,7 +65,6 @@ function AppContent() {
         <Route element={<Layout />}>
           <Route path="/servers" element={<ServersPage />} />
           <Route path="/query" element={<QueryPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/log" element={<LogPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           {/* 默认重定向到服务器页 */}
@@ -71,17 +72,6 @@ function AppContent() {
         </Route>
       </Routes>
       <StatusBar />
-      {/* 调度事件 Toast 通知 */}
-      {toast && (
-        <div
-          className={`fixed bottom-16 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg text-white text-sm cursor-pointer select-none animate-fadeIn ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
-          onClick={handleToastClick}
-        >
-          {toast.message}
-        </div>
-      )}
     </div>
   );
 }

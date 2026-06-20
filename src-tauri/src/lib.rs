@@ -90,9 +90,8 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // 启动后台健康监控和调度引擎线程
+            // 启动后台健康监控线程
             dns::monitor::spawn_monitor(handle.clone());
-            dns::schedule::spawn_schedule_engine(handle.clone());
 
             // 注册全局快捷键
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
@@ -123,6 +122,7 @@ pub fn run() {
             commands::dns::switch_dns,
             commands::dns::reset_system_dns,
             commands::dns::test_dns_latency,
+            commands::dns::test_all_dns_latency,
             commands::dns::resolve_dns,
             commands::dns::check_dns_leak,
             commands::dns::get_history,
@@ -143,8 +143,6 @@ pub fn run() {
             dns::provider::update_server_in_registry,
             dns::provider::delete_server_from_registry,
             dns::provider::reset_provider_registry,
-            commands::schedule::get_schedule_status,
-            commands::schedule::set_schedule_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

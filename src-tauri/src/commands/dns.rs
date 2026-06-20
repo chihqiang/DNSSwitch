@@ -252,6 +252,54 @@ pub fn test_dns_latency(server_id: String, address: String) -> Result<DnsLatency
     }
 }
 
+/// 批量测试多个 DNS 服务器的延迟（Rust 端并行，一次 IPC 调用）
+#[tauri::command(rename_all = "camelCase")]
+pub fn test_all_dns_latency(servers: Vec<DnsLatencyInput>) -> Result<Vec<DnsLatencyResult>, String> {
+    if servers.is_empty() {
+        return Ok(Vec::new());
+    }
+    // 使用 scoped threads 并行测试所有地址
+    let results = std::sync::Mutex::new(Vec::with_capacity(servers.len()));
+    std::thread::scope(|s| {
+        for input in &servers {
+            s.spawn(|| {
+                let result = match resolver::measure_latency(&input.address) {
+                    Ok(latency_ms) => {
+                        log::debug!("[dns] Latency test {}: {:.2}ms", input.address, latency_ms);
+                        DnsLatencyResult {
+                            server_id: input.server_id.clone(),
+                            address: input.address.clone(),
+                            latency_ms,
+                            success: true,
+                            error: None,
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("[dns] Latency test {} failed: {}", input.address, e.message);
+                        DnsLatencyResult {
+                            server_id: input.server_id.clone(),
+                            address: input.address.clone(),
+                            latency_ms: f64::default(),
+                            success: false,
+                            error: Some(e.message),
+                        }
+                    }
+                };
+                results.lock().unwrap().push(result);
+            });
+        }
+    });
+    Ok(results.into_inner().unwrap())
+}
+
+/// 批量延迟测试的输入参数
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsLatencyInput {
+    pub server_id: String,
+    pub address: String,
+}
+
 /// 通过 DNS-over-HTTPS 解析域名
 #[tauri::command(rename_all = "camelCase")]
 pub async fn resolve_dns_doh(domain: String, record_type: String, doh_url: String) -> Result<query::DnsQueryResult, String> {

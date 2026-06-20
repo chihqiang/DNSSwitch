@@ -20,7 +20,7 @@ export function useConfig() {
     try {
       const result = await invoke<AppConfig>('load_config');
       useConfigStore.getState().setConfig(result);
-      logger.info(`Configuration loaded (${result.servers.length} servers, ${result.schedule.rules.length} rules)`);
+      logger.info(`Configuration loaded (${result.servers.length} servers)`);
       useConfigStore.getState().setError(null);
     } catch (e) {
       logger.error(`Failed to load configuration: ${e}`);

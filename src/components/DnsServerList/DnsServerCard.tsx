@@ -4,6 +4,7 @@
 // ============================================================
 
 import { useTranslation } from 'react-i18next';
+import { memo } from 'react';
 import type { DnsServer } from '@/types';
 import { Card, Badge, Button, ButtonVariant, BadgeVariant } from '@/components/common';
 import { getLatencyBadgeVariant } from '@/constants';
@@ -20,7 +21,7 @@ interface DnsServerCardProps {
   testingServerId: string | null;
 }
 
-export function DnsServerCard({
+export const DnsServerCard = memo(function DnsServerCard({
   server,
   onSwitch,
   onTest,
@@ -107,4 +108,4 @@ export function DnsServerCard({
       </div>
     </Card>
   );
-}
+});
