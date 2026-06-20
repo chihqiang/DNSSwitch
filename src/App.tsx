@@ -1,51 +1,42 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Suspense, useEffect } from 'react'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Layout } from '@/components/Layout/Layout'
+import { ServersPage } from '@/pages/ServersPage'
+import { SchedulePage } from '@/pages/SchedulePage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { StatusBar } from '@/components/StatusBar'
+import { useConfig } from '@/hooks'
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+function AppContent() {
+  const { loadConfig } = useConfig()
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    loadConfig()
+  }, [loadConfig])
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
+    <div className="flex flex-col min-h-screen">
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/servers" element={<ServersPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/servers" replace />} />
+        </Route>
+      </Routes>
+      <StatusBar />
+    </div>
+  )
 }
 
-export default App;
+function App() {
+  return (
+    <Suspense fallback={null}>
+      <HashRouter>
+        <AppContent />
+      </HashRouter>
+    </Suspense>
+  )
+}
+
+export default App
