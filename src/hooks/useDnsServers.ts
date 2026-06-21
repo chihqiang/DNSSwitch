@@ -15,7 +15,9 @@ function serverDefToDnsServer(def: ServerDef, providers: ProviderRegistry['provi
     id: def.id,
     name: def.name,
     addresses: def.addresses,
-    provider: p ? { name: p.name, displayName: p.displayName, website: p.website, description: p.description } : { name: def.providerKey, displayName: def.name },
+    provider: p
+      ? { name: p.name, displayName: p.displayName, website: p.website, description: p.description }
+      : { name: def.providerKey, displayName: def.name },
     isActive: false,
     isSystem: false,
     tags: def.tags as DnsServer['tags'],

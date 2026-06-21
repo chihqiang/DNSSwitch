@@ -85,20 +85,14 @@ export const useDnsStore = create<DnsState>((set) => ({
   setActiveServer: (id) =>
     set((state) => ({
       servers: state.servers.map((s) =>
-        s.id === id
-          ? { ...s, isActive: true, updatedAt: Date.now() }
-          : s.isActive
-            ? { ...s, isActive: false }
-            : s,
+        s.id === id ? { ...s, isActive: true, updatedAt: Date.now() } : s.isActive ? { ...s, isActive: false } : s,
       ),
     })),
 
   /** 清除所有服务器的活跃状态 */
   clearActive: () =>
     set((state) => ({
-      servers: state.servers.map((s) =>
-        s.isActive ? { ...s, isActive: false } : s,
-      ),
+      servers: state.servers.map((s) => (s.isActive ? { ...s, isActive: false } : s)),
     })),
 
   setLatencyTests: (tests) => set({ latencyTests: tests }),

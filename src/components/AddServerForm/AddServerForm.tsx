@@ -32,6 +32,7 @@ interface AddServerFormProps {
 export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFormProps) {
   const { t } = useTranslation();
   const isEditing = !!editingServer;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 表单状态
   const [name, setName] = useState(editingServer?.name ?? '');
@@ -56,7 +57,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
   const hasDot = dotAddress.trim().length > 0;
 
   /** 表单校验 */
-  function validate(): boolean {
+  const validate = useCallback((): boolean => {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = t('server.name_required');
     if (!hasAddr && !hasDoh && !hasDot) {
@@ -68,7 +69,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }
+  }, [name, hasAddr, hasDoh, hasDot, primaryAddr, secondaryAddr, t]);
 
   /** 测试主地址的延迟 */
   const handleTest = useCallback(async () => {
@@ -95,33 +96,45 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     }
   }, [primaryAddr]);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!validate()) return;
+      setIsSubmitting(true);
 
-    const addresses: string[] = [];
-    if (primaryAddr.trim()) addresses.push(primaryAddr.trim());
-    if (secondaryAddr.trim()) addresses.push(secondaryAddr.trim());
+      const addresses: string[] = [];
+      if (primaryAddr.trim()) addresses.push(primaryAddr.trim());
+      if (secondaryAddr.trim()) addresses.push(secondaryAddr.trim());
 
-    const now = Date.now();
-    const server: DnsServer = {
-      id: editingServer?.id ?? `custom-${now}`,
-      name: name.trim(),
-      addresses,
-      provider: editingServer?.provider ?? { name: 'custom', displayName: 'Custom', description: 'Custom DNS server' },
-      isActive: editingServer?.isActive ?? false,
-      isSystem: editingServer?.isSystem ?? false,
-      tags: [],
-      dohUrl: dohUrl.trim() || undefined,
-      dotAddress: dotAddress.trim() || undefined,
-      createdAt: editingServer?.createdAt ?? now,
-      updatedAt: now,
-      latency: editingServer?.latency,
-    };
+      const now = Date.now();
+      const server: DnsServer = {
+        id: editingServer?.id ?? `custom-${now}`,
+        name: name.trim(),
+        addresses,
+        provider: editingServer?.provider ?? {
+          name: 'custom',
+          displayName: 'Custom',
+          description: 'Custom DNS server',
+        },
+        isActive: editingServer?.isActive ?? false,
+        isSystem: editingServer?.isSystem ?? false,
+        tags: [],
+        dohUrl: dohUrl.trim() || undefined,
+        dotAddress: dotAddress.trim() || undefined,
+        createdAt: editingServer?.createdAt ?? now,
+        updatedAt: now,
+        latency: editingServer?.latency,
+      };
 
-    onSubmit(server);
-    if (!isEditing) reset();
-  }, [editingServer, isEditing, name, primaryAddr, secondaryAddr, dohUrl, dotAddress, onSubmit]);
+      try {
+        await onSubmit(server);
+        if (!isEditing) reset();
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [editingServer, isEditing, name, primaryAddr, secondaryAddr, dohUrl, dotAddress, onSubmit, validate],
+  );
 
   return (
     <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
@@ -209,7 +222,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
 
       {/* 按钮 */}
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
-        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onCancel}>
+        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onCancel} disabled={isSubmitting}>
           {t('common.cancel')}
         </Button>
         <Button
@@ -218,11 +231,11 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
           size="sm"
           onClick={handleTest}
           isLoading={isTesting}
-          disabled={!primaryAddr.trim() || !isValidIp(primaryAddr.trim())}
+          disabled={!primaryAddr.trim() || !isValidIp(primaryAddr.trim()) || isSubmitting}
         >
           Test
         </Button>
-        <Button type="submit" variant={ButtonVariant.PRIMARY}>
+        <Button type="submit" variant={ButtonVariant.PRIMARY} isLoading={isSubmitting}>
           {isEditing ? t('common.save') : t('common.add')}
         </Button>
       </div>

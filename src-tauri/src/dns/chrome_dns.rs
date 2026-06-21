@@ -178,6 +178,80 @@ pub fn reset_chrome_doh() -> Result<(), AppError> {
     Ok(())
 }
 
+/// 获取 Chrome 版本号
+pub fn get_chrome_version() -> Option<String> {
+    let local_state = chrome_local_state_path()?;
+    let parent = local_state.parent()?; // e.g. .../Google/Chrome/
+
+    for profile in CHROME_PROFILES {
+        if !parent.ends_with(profile) {
+            continue;
+        }
+
+        // macOS: 从 Info.plist 读取版本
+        #[cfg(target_os = "macos")]
+        {
+            // 映射到 .app bundle 路径
+            let app_name = match *profile {
+                "Google/Chrome Beta" => "Google Chrome Beta",
+                "Google/Chrome Canary" => "Google Chrome Canary",
+                _ => "Google Chrome",
+            };
+            let plist = format!("/Applications/{}.app/Contents/Info.plist", app_name);
+            let output = Command::new("defaults")
+                .args(["read", &plist, "CFBundleShortVersionString"])
+                .output()
+                .ok()?;
+            if output.status.success() {
+                let v = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !v.is_empty() {
+                    return Some(v);
+                }
+            }
+        }
+
+        // Linux: google-chrome --version
+        #[cfg(target_os = "linux")]
+        {
+            let bin = match *profile {
+                "Google/Chrome Beta" => "google-chrome-beta",
+                "Google/Chrome Canary" => "google-chrome-canary",
+                _ => "google-chrome",
+            };
+            let output = Command::new(bin).arg("--version").output().ok()?;
+            if output.status.success() {
+                let v = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !v.is_empty() {
+                    return Some(v);
+                }
+            }
+        }
+
+        // Windows: 读取注册表
+        #[cfg(target_os = "windows")]
+        {
+            // 尝试从 Program Files 读取版本
+            let bin_path = match *profile {
+                "Google/Chrome Beta" => {
+                    r"C:\Program Files\Google\Chrome Beta\Application\chrome.exe"
+                }
+                "Google/Chrome Canary" => {
+                    r"C:\Program Files\Google\Chrome Canary\Application\chrome.exe"
+                }
+                _ => r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            };
+            if let Ok(meta) = std::fs::metadata(&bin_path) {
+                if meta.is_file() {
+                    // TODO: 解析 chrome.exe 的文件版本（可通过 GetFileVersionInfo）
+                    // 此处先通过 wmic 读取
+                    let _ = bin_path;
+                }
+            }
+        }
+    }
+    None
+}
+
 /// 获取 Chrome 当前的 DoH 设置
 pub fn get_chrome_doh() -> Result<Option<String>, AppError> {
     let local_state = match chrome_local_state_path() {

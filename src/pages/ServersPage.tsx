@@ -9,6 +9,7 @@ import { DnsServerList } from '@/components/DnsServerList';
 import { AddServerForm } from '@/components/AddServerForm';
 import { Modal, ConfirmDialog, ErrorBoundary } from '@/components/common';
 import { useDnsServers } from '@/hooks';
+import { useToastStore } from '@/stores/toastStore';
 import type { DnsServer } from '@/types';
 
 export function ServersPage() {
@@ -69,8 +70,8 @@ export function ServersPage() {
         }
         setShowAddServer(false);
         setEditingServer(null);
-      } catch {
-        // 错误由 store 处理
+      } catch (e) {
+        useToastStore.getState().addToast('error', String(e));
       }
     },
     [editingServer, addCustomServer, editServer],
@@ -83,11 +84,7 @@ export function ServersPage() {
 
   return (
     <ErrorBoundary>
-      <DnsServerList
-        onEdit={handleEdit}
-        onAdd={handleAdd}
-        onDelete={handleDeleteRequest}
-      />
+      <DnsServerList onEdit={handleEdit} onAdd={handleAdd} onDelete={handleDeleteRequest} />
 
       {/* 添加/编辑服务器弹窗 */}
       <Modal

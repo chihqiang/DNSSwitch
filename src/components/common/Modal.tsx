@@ -1,12 +1,12 @@
 // ============================================================
 // Modal 模态框组件
-// 支持 ESC 关闭、点击遮罩关闭、aria 无障碍属性
+// 支持 ESC 关闭、点击遮罩关闭、焦点陷阱、aria 无障碍属性
 // ============================================================
 
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KEY_ESCAPE } from '@/constants';
+import { KEY_ESCAPE, KEY_TAB } from '@/constants';
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,15 +18,52 @@ interface ModalProps {
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const { t } = useTranslation();
   const overlayRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // 注册/注销 ESC 按键监听
+  // 注册/注销键盘监听
   useEffect(() => {
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === KEY_ESCAPE) onClose();
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === KEY_ESCAPE) {
+        onClose();
+        return;
+      }
+      // 焦点陷阱：Tab/Shift+Tab 在弹窗内循环
+      if (e.key === KEY_TAB && contentRef.current) {
+        const focusable = contentRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
+
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      document.addEventListener('keydown', handleKeyDown);
+      // 聚焦弹窗内第一个可聚焦元素
+      requestAnimationFrame(() => {
+        const focusable = contentRef.current?.querySelector<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        focusable?.focus();
+      });
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        previousFocusRef.current?.focus();
+      };
     }
   }, [isOpen, onClose]);
 
@@ -37,11 +74,11 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       ref={overlayRef}
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-[fadeIn_0.15s_ease-out]"
       onClick={(e) => {
-        // 点击遮罩（而非内容区）关闭
         if (e.target === overlayRef.current) onClose();
       }}
     >
       <div
+        ref={contentRef}
         className="bg-bg-card rounded p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto shadow-modal animate-[scaleIn_0.15s_ease-out]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

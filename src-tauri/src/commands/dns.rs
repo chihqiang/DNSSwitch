@@ -414,3 +414,9 @@ pub fn reset_chrome_doh() -> Result<(), String> {
 pub fn is_chrome_installed() -> bool {
     crate::dns::chrome_dns::is_chrome_installed()
 }
+
+/// 获取 Chrome 版本号
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_chrome_version() -> Option<String> {
+    crate::dns::chrome_dns::get_chrome_version()
+}

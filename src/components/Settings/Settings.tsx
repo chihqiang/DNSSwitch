@@ -3,36 +3,35 @@
 // 包含常规设置、系统信息、工具（导入/导出）三个标签页
 // ============================================================
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { enable as enableAutostart, disable as disableAutostart } from '@tauri-apps/plugin-autostart';
 import { logger } from '@/lib/log';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore } from '@/stores';
+import { useToastStore } from '@/stores/toastStore';
 import { ThemeMode, type AppConfig } from '@/types';
 import { useSystemInfo } from '@/hooks';
-import { Card, Button, ButtonVariant, LoadingSpinner } from '@/components/common';
+import { useDnsStore } from '@/stores';
+import { Button, ButtonVariant, LoadingSpinner } from '@/components/common';
 import { LATENCY_CHECK_INTERVAL_MIN_S, LATENCY_CHECK_INTERVAL_MAX_S } from '@/constants';
 
 interface SettingsProps {
   onSave: () => void;
 }
 
-/** 支持的语言列表 */
 const LANGUAGES = [
   { value: 'en', label: 'English' },
   { value: 'zh', label: '中文' },
 ];
 
-/** 主题选项 */
 const THEME_OPTIONS = [
   { value: ThemeMode.SYSTEM, key: 'theme.system' },
   { value: ThemeMode.LIGHT, key: 'theme.light' },
   { value: ThemeMode.DARK, key: 'theme.dark' },
 ];
 
-/** 设置标签页定义 */
 const TABS = [
   { key: 'general', labelKey: 'settings.general' },
   { key: 'system', labelKey: 'settings.system_info' },
@@ -41,12 +40,19 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key'];
 
-/** 系统信息行（标签: 值） */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
-      <span className="text-xs text-text-muted w-24 shrink-0">{label}</span>
+      <span className="text-xs text-text-muted w-20 shrink-0">{label}</span>
       <span className="text-xs text-text-primary truncate">{value}</span>
+    </div>
+  );
+}
+
+function SettingsGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-bg-secondary rounded-lg overflow-hidden [&>*+*]:border-t [&>*+*]:border-border">
+      {children}
     </div>
   );
 }
@@ -54,15 +60,22 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 export function Settings({ onSave }: SettingsProps) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>('general');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const config = useConfigStore((s) => s.config);
   const isSaving = useConfigStore((s) => s.isSaving);
   const error = useConfigStore((s) => s.error);
-  const { systemInfo, networkServices, loading: systemLoading } = useSystemInfo();
+  const { systemInfo, networkServices, loading: systemLoading, error: systemError } = useSystemInfo();
+  const currentStatus = useDnsStore((s) => s.currentStatus);
+  const [chromeInstalled, setChromeInstalled] = useState(false);
+  const [chromeVersion, setChromeVersion] = useState<string | null>(null);
   const { settings } = config;
 
-  // ---- 导入/导出 ----
+  useEffect(() => {
+    invoke<boolean>('is_chrome_installed').then(setChromeInstalled).catch(() => {});
+    invoke<string | null>('get_chrome_version').then(setChromeVersion).catch(() => {});
+  }, []);
 
-  /** 导出配置为 JSON 文件 */
   const handleExport = useCallback(async () => {
     const path = await save({
       title: t('settings.export_config'),
@@ -70,15 +83,17 @@ export function Settings({ onSave }: SettingsProps) {
       filters: [{ name: 'JSON', extensions: ['json'] }],
     });
     if (!path) return;
+    setIsExporting(true);
     try {
       await invoke('export_config', { filePath: path });
-      alert(t('settings.export_success'));
+      useToastStore.getState().addToast('success', t('settings.export_success'));
     } catch (e) {
-      alert(`${t('settings.export_failed')}: ${e}`);
+      useToastStore.getState().addToast('error', `${t('settings.export_failed')}: ${e}`);
+    } finally {
+      setIsExporting(false);
     }
   }, [t]);
 
-  /** 从 JSON 文件导入配置 */
   const handleImport = useCallback(async () => {
     const path = await open({
       title: t('settings.import_config'),
@@ -87,249 +102,357 @@ export function Settings({ onSave }: SettingsProps) {
       directory: false,
     });
     if (!path) return;
+    setIsImporting(true);
     try {
       const cfg = await invoke('import_config', { filePath: path });
       useConfigStore.getState().setConfig(cfg as AppConfig);
-      alert(t('settings.import_success'));
+      useToastStore.getState().addToast('success', t('settings.import_success'));
     } catch (e) {
-      alert(`${t('settings.import_failed')}: ${e}`);
+      useToastStore.getState().addToast('error', `${t('settings.import_failed')}: ${e}`);
+    } finally {
+      setIsImporting(false);
     }
-}, [t]);
+  }, [t]);
 
-  /** 切换语言 */
-  function handleLanguageChange(lng: string) {
+  const handleLanguageChange = useCallback((lng: string) => {
     i18n.changeLanguage(lng);
-  }
+  }, [i18n]);
 
-  // ---- 标签页头部 ----
-
-  const tabHeader = useMemo(() => (
-    <div className="flex gap-1 border-b border-border pb-2">
-      {TABS.map((tab) => (
-        <button
-          key={tab.key}
-          className={`px-3 py-1.5 text-sm rounded transition-colors duration-150 ${
-            activeTab === tab.key
-              ? 'bg-accent text-white font-medium'
-              : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
-          }`}
-          onClick={() => setActiveTab(tab.key)}
-        >
-          {t(tab.labelKey)}
-        </button>
-      ))}
-    </div>
-  ), [activeTab, t]);
-
-  // ---- 常规设置标签页 ----
-
-  const generalTab = useMemo(() => (
-    <div className="flex flex-col gap-4">
-      <section>
-        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.general')}</h3>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <input
-              type="checkbox"
-              className="w-4 h-4 accent-accent rounded"
-              checked={settings.autoStart}
-              onChange={async (e) => {
-                useConfigStore.getState().updateSettings({ autoStart: e.target.checked });
-                try {
-                  if (e.target.checked) {
-                    await enableAutostart();
-                  } else {
-                    await disableAutostart();
-                  }
-                } catch (err) {
-                  logger.error(`Failed to toggle autostart: ${err}`);
-                }
-              }}
-            />
-            <span className="text-sm">{t('settings.auto_start')}</span>
-          </label>
-
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <input
-              type="checkbox"
-              className="w-4 h-4 accent-accent rounded"
-              checked={settings.minimizeToTray}
-              onChange={(e) => useConfigStore.getState().updateSettings({ minimizeToTray: e.target.checked })}
-            />
-            <span className="text-sm">{t('settings.minimize_to_tray')}</span>
-          </label>
-
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <input
-              type="checkbox"
-              className="w-4 h-4 accent-accent rounded"
-              checked={settings.notifyOnSwitch}
-              onChange={(e) => useConfigStore.getState().updateSettings({ notifyOnSwitch: e.target.checked })}
-            />
-            <span className="text-sm">{t('settings.notify_on_switch')}</span>
-          </label>
-
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <input
-              type="checkbox"
-              className="w-4 h-4 accent-accent rounded"
-              checked={settings.checkUpdates}
-              onChange={(e) => useConfigStore.getState().updateSettings({ checkUpdates: e.target.checked })}
-            />
-            <span className="text-sm">{t('settings.check_updates')}</span>
-          </label>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-          {t('settings.performance')}
-        </h3>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <span className="text-sm">{t('settings.latency_interval')}</span>
-            <input
-              type="number"
-              className="px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm w-20 text-center ml-auto"
-              value={Math.round(settings.latencyCheckInterval / 1000)}
-              min={LATENCY_CHECK_INTERVAL_MIN_S}
-              max={LATENCY_CHECK_INTERVAL_MAX_S}
-              onChange={(e) => {
-                const val = Math.max(LATENCY_CHECK_INTERVAL_MIN_S, Math.min(LATENCY_CHECK_INTERVAL_MAX_S, Number(e.target.value) || LATENCY_CHECK_INTERVAL_MIN_S));
-                useConfigStore.getState().updateSettings({ latencyCheckInterval: val * 1000 });
-              }}
-            />
-            <span className="text-xs text-text-muted">s</span>
-          </label>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-          {t('settings.appearance')}
-        </h3>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <span className="text-sm">{t('settings.language')}</span>
-            <select
-              className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
-              value={LANGUAGES.find((l) => i18n.language.startsWith(l.value))?.value ?? LANGUAGES[0].value}
-              onChange={(e) => handleLanguageChange(e.target.value)}
+  const tabHeader = useMemo(
+    () => (
+      <div className="flex gap-1">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              className={`relative px-4 py-2 text-sm transition-colors duration-150 ${
+                isActive
+                  ? 'text-accent font-medium'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+              onClick={() => setActiveTab(tab.key)}
             >
-              {LANGUAGES.map((lng) => (
-                <option key={lng.value} value={lng.value}>
-                  {lng.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex items-center gap-2.5 px-3 py-2 bg-bg-secondary rounded cursor-pointer select-none hover:bg-border transition-colors duration-150">
-            <span className="text-sm">{t('settings.theme_mode')}</span>
-            <select
-              className="ml-auto px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm"
-              value={config.theme.mode}
-              onChange={(e) => useConfigStore.getState().updateTheme(e.target.value as (typeof ThemeMode)[keyof typeof ThemeMode])}
-            >
-              {THEME_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.key)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </section>
-
-      {error && <p className="text-xs text-danger">{error}</p>}
-
-      <div className="flex items-center gap-2 pt-3 border-t border-border">
-        <Button variant={ButtonVariant.PRIMARY} onClick={onSave} isLoading={isSaving}>
-          {t('settings.save')}
-        </Button>
+              {t(tab.labelKey)}
+              {isActive && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
-    </div>
-  ), [settings, error, isSaving, onSave, t]);
+    ),
+    [activeTab, t],
+  );
 
-  // ---- 系统信息标签页 ----
+  const generalTab = useMemo(
+    () => (
+      <div className="flex flex-col gap-3">
+        <section>
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+            {t('settings.general')}
+          </h3>
+          <SettingsGroup>
+            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-accent rounded shrink-0"
+                checked={settings.autoStart}
+                onChange={async (e) => {
+                  useConfigStore.getState().updateSettings({ autoStart: e.target.checked });
+                  try {
+                    if (e.target.checked) {
+                      await enableAutostart();
+                    } else {
+                      await disableAutostart();
+                    }
+                  } catch (err) {
+                    logger.error(`Failed to toggle autostart: ${err}`);
+                  }
+                }}
+              />
+              <span className="text-sm">{t('settings.auto_start')}</span>
+            </label>
 
-  const systemTab = useMemo(() => (
-    <div className="flex flex-col gap-4">
-      {systemLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <LoadingSpinner size={20} />
-        </div>
-      ) : (
-        <>
-          {systemInfo && (
-            <section>
-              <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-                {t('settings.system_info')}
-              </h3>
-              <div className="bg-bg-secondary rounded">
-                <InfoRow label={t('settings.os')} value={systemInfo.os} />
-                <InfoRow label={t('settings.os_version')} value={systemInfo.osVersion} />
-                <InfoRow label={t('settings.hostname')} value={systemInfo.hostname} />
-                <InfoRow label={t('settings.kernel')} value={systemInfo.kernelVersion} />
+            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-accent rounded shrink-0"
+                checked={settings.minimizeToTray}
+                onChange={(e) => useConfigStore.getState().updateSettings({ minimizeToTray: e.target.checked })}
+              />
+              <span className="text-sm">{t('settings.minimize_to_tray')}</span>
+            </label>
+
+            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-accent rounded shrink-0"
+                checked={settings.notifyOnSwitch}
+                onChange={(e) => useConfigStore.getState().updateSettings({ notifyOnSwitch: e.target.checked })}
+              />
+              <span className="text-sm">{t('settings.notify_on_switch')}</span>
+            </label>
+
+            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-accent rounded shrink-0"
+                checked={settings.checkUpdates}
+                onChange={(e) => useConfigStore.getState().updateSettings({ checkUpdates: e.target.checked })}
+              />
+              <span className="text-sm">{t('settings.check_updates')}</span>
+            </label>
+          </SettingsGroup>
+        </section>
+
+        <section>
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+            {t('settings.performance')}
+          </h3>
+          <SettingsGroup>
+            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+              <span className="text-sm">{t('settings.latency_interval')}</span>
+              <span className="ml-auto flex items-center gap-1.5">
+                <input
+                  type="number"
+                  className="px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm w-14 text-center"
+                  value={Math.round(settings.latencyCheckInterval / 1000)}
+                  min={LATENCY_CHECK_INTERVAL_MIN_S}
+                  max={LATENCY_CHECK_INTERVAL_MAX_S}
+                  onChange={(e) => {
+                    const val = Math.max(
+                      LATENCY_CHECK_INTERVAL_MIN_S,
+                      Math.min(LATENCY_CHECK_INTERVAL_MAX_S, Number(e.target.value) || LATENCY_CHECK_INTERVAL_MIN_S),
+                    );
+                    useConfigStore.getState().updateSettings({ latencyCheckInterval: val * 1000 });
+                  }}
+                />
+                <span className="text-xs text-text-muted">s</span>
+              </span>
+            </label>
+          </SettingsGroup>
+        </section>
+
+        <section>
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+            {t('settings.appearance')}
+          </h3>
+          <SettingsGroup>
+            <div className="px-3.5 py-2.5">
+              <span className="text-sm block mb-2">{t('settings.language')}</span>
+              <div className="flex gap-3">
+                {LANGUAGES.map((lng) => {
+                  const selected = i18n.language.startsWith(lng.value);
+                  return (
+                    <label
+                      key={lng.value}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer select-none transition-colors duration-150 ${
+                        selected
+                          ? 'bg-accent text-white'
+                          : 'bg-bg-card text-text-secondary border border-border hover:border-accent hover:text-text-primary'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="language"
+                        className="sr-only"
+                        checked={selected}
+                        onChange={() => handleLanguageChange(lng.value)}
+                      />
+                      {lng.label}
+                    </label>
+                  );
+                })}
               </div>
-            </section>
-          )}
+            </div>
 
-          {networkServices.length > 0 && (
+            <div className="px-3.5 py-2.5">
+              <span className="text-sm block mb-2">{t('settings.theme_mode')}</span>
+              <div className="flex gap-3">
+                {THEME_OPTIONS.map((opt) => {
+                  const selected = config.theme.mode === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer select-none transition-colors duration-150 ${
+                        selected
+                          ? 'bg-accent text-white'
+                          : 'bg-bg-card text-text-secondary border border-border hover:border-accent hover:text-text-primary'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="theme"
+                        className="sr-only"
+                        checked={selected}
+                        onChange={() =>
+                          useConfigStore.getState().updateTheme(opt.value as (typeof ThemeMode)[keyof typeof ThemeMode])
+                        }
+                      />
+                      {t(opt.key)}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </SettingsGroup>
+        </section>
+
+        {error && <p className="text-xs text-danger">{error}</p>}
+
+        <div className="flex items-center gap-2 pt-1">
+          <Button variant={ButtonVariant.PRIMARY} onClick={onSave} isLoading={isSaving}>
+            {t('settings.save')}
+          </Button>
+        </div>
+      </div>
+    ),
+    [settings, error, isSaving, onSave, t, config.theme.mode, i18n.language, handleLanguageChange],
+  );
+
+  const systemTab = useMemo(
+    () => (
+      <div className="flex flex-col gap-3">
+        {systemLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <LoadingSpinner size={20} />
+          </div>
+        ) : (
+          <>
+            {systemError && (
+              <div className="px-3.5 py-2 bg-danger-bg text-danger border border-danger/20 rounded-lg text-xs">
+                {systemError}
+              </div>
+            )}
+
+            {currentStatus && (
+              <section>
+                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+                  {t('settings.current_dns')}
+                </h3>
+                <SettingsGroup>
+                  <InfoRow label={t('settings.network_service')} value={currentStatus.networkService} />
+                  <InfoRow
+                    label={t('settings.dns_servers')}
+                    value={currentStatus.currentServers.join(', ')}
+                  />
+                  <InfoRow
+                    label={t('settings.dns_status')}
+                    value={currentStatus.isCustom ? t('common.custom') : t('settings.system_default')}
+                  />
+                  {currentStatus.latency !== undefined && (
+                    <InfoRow label={t('settings.latency_interval')} value={t('status.latency_ms', { latency: Math.round(currentStatus.latency) })} />
+                  )}
+                </SettingsGroup>
+              </section>
+            )}
+
             <section>
-              <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+                {t('settings.chrome')}
+              </h3>
+              <SettingsGroup>
+                <InfoRow
+                  label={t('settings.dns_status')}
+                  value={chromeInstalled ? t('settings.chrome_installed') : t('settings.chrome_not_installed')}
+                />
+                {chromeInstalled && chromeVersion && (
+                  <InfoRow label={t('settings.chrome_version')} value={chromeVersion} />
+                )}
+                <InfoRow
+                  label={t('settings.chrome_doh')}
+                  value={currentStatus?.chromeDohUrl ? t('common.enabled') : t('common.disabled')}
+                />
+                {currentStatus?.chromeDohUrl && (
+                  <InfoRow label={t('settings.chrome_doh_url')} value={currentStatus.chromeDohUrl} />
+                )}
+              </SettingsGroup>
+            </section>
+
+            {systemInfo && (
+              <section>
+                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+                  {t('settings.system_info')}
+                </h3>
+                <SettingsGroup>
+                  <InfoRow label={t('settings.os')} value={systemInfo.os} />
+                  <InfoRow label={t('settings.os_version')} value={systemInfo.osVersion} />
+                  <InfoRow label={t('settings.hostname')} value={systemInfo.hostname} />
+                  <InfoRow label={t('settings.kernel')} value={systemInfo.kernelVersion} />
+                </SettingsGroup>
+              </section>
+            )}
+
+            <section>
+              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
                 {t('settings.network_services')}
               </h3>
-              <div className="bg-bg-secondary rounded">
-                {networkServices.map((svc) => (
-                  <div
-                    key={svc.name}
-                    className="flex items-center gap-2 px-3 py-1.5 border-b border-border last:border-b-0"
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`}
-                    />
-                    <span className="text-xs text-text-primary">{svc.displayName}</span>
-                    {svc.dnsServers.length > 0 && (
-                      <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {networkServices.length > 0 ? (
+                <SettingsGroup>
+                  {networkServices.map((svc) => (
+                    <div
+                      key={svc.name}
+                      className="flex items-center gap-2 px-3.5 py-2.5 cursor-default hover:bg-border/30 transition-colors duration-150"
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`}
+                      />
+                      <span className="text-xs text-text-primary">{svc.displayName}</span>
+                      {svc.dnsServers.length > 0 && (
+                        <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
+                      )}
+                    </div>
+                  ))}
+                </SettingsGroup>
+              ) : (
+                !systemLoading && (
+                  <p className="text-xs text-text-muted px-3 py-5 text-center">
+                    {t('settings.network_services_empty')}
+                  </p>
+                )
+              )}
             </section>
-          )}
-        </>
-      )}
-    </div>
-  ), [systemLoading, systemInfo, networkServices, t]);
-
-  // ---- 工具标签页 ----
-
-  const toolsTab = useMemo(() => (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-text-muted">{t('settings.tools_desc')}</p>
-      <div className="flex items-center gap-2">
-        <Button variant={ButtonVariant.SECONDARY} onClick={handleExport}>
-          {t('settings.export')}
-        </Button>
-        <Button variant={ButtonVariant.SECONDARY} onClick={handleImport}>
-          {t('settings.import')}
-        </Button>
+          </>
+        )}
       </div>
-    </div>
-  ), [handleExport, handleImport, t]);
+    ),
+    [systemLoading, systemInfo, networkServices, systemError, currentStatus, chromeInstalled, chromeVersion, t],
+  );
 
-  const tabContent: Record<TabKey, React.ReactNode> = useMemo(() => ({
-    general: generalTab,
-    system: systemTab,
-    tools: toolsTab,
-  }), [generalTab, systemTab, toolsTab]);
+  const toolsTab = useMemo(
+    () => (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-text-secondary">{t('settings.tools_desc')}</p>
+        <div className="flex items-center gap-2">
+          <Button variant={ButtonVariant.SECONDARY} onClick={handleExport} isLoading={isExporting}>
+            {isExporting ? t('common.exporting') : t('settings.export')}
+          </Button>
+          <Button variant={ButtonVariant.SECONDARY} onClick={handleImport} isLoading={isImporting}>
+            {isImporting ? t('common.importing') : t('settings.import')}
+          </Button>
+        </div>
+      </div>
+    ),
+    [handleExport, handleImport, isExporting, isImporting, t],
+  );
+
+  const tabContent: Record<TabKey, React.ReactNode> = useMemo(
+    () => ({
+      general: generalTab,
+      system: systemTab,
+      tools: toolsTab,
+    }),
+    [generalTab, systemTab, toolsTab],
+  );
 
   return (
-    <Card className="flex flex-col gap-3 p-3">
-      <h2 className="text-sm font-semibold">{t('settings.title')}</h2>
+    <div className="flex flex-col gap-2">
       {tabHeader}
-      {tabContent[activeTab]}
-    </Card>
+      <div className="border-t border-border" />
+      <div className="pt-1">
+        {tabContent[activeTab]}
+      </div>
+    </div>
   );
 }

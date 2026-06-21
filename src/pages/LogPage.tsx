@@ -6,7 +6,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { Card, Badge, BadgeVariant, Button, ButtonVariant, LoadingSpinner, ErrorBoundary } from '@/components/common';
+import {
+  Card,
+  Badge,
+  BadgeVariant,
+  Button,
+  ButtonVariant,
+  LoadingSpinner,
+  ErrorBoundary,
+  ConfirmDialog,
+} from '@/components/common';
 import { logger } from '@/lib/log';
 import { useRequestLogStore } from '@/stores';
 import type { DnsEvent } from '@/types';
@@ -21,6 +30,7 @@ export function LogPage() {
   const [historyEvents, setHistoryEvents] = useState<DnsEvent[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const loadHistory = useCallback(async () => {
     setIsLoadingHistory(true);
@@ -44,14 +54,18 @@ export function LogPage() {
   }, [loadHistory]);
 
   // 合并请求日志和操作历史为统一时间线，按时间倒序
-  const timeline: TimelineEntry[] = useMemo(() => [
-    ...requestEntries.map((e): TimelineEntry => ({ kind: 'query' as const, data: e })),
-    ...historyEvents.map((e): TimelineEntry => ({ kind: 'event' as const, data: e })),
-  ].sort((a, b) => {
-    const ta = a.kind === 'query' ? a.data.timestamp : a.data.timestamp;
-    const tb = b.kind === 'query' ? b.data.timestamp : b.data.timestamp;
-    return tb - ta;
-  }), [requestEntries, historyEvents]);
+  const timeline: TimelineEntry[] = useMemo(
+    () =>
+      [
+        ...requestEntries.map((e): TimelineEntry => ({ kind: 'query' as const, data: e })),
+        ...historyEvents.map((e): TimelineEntry => ({ kind: 'event' as const, data: e })),
+      ].sort((a, b) => {
+        const ta = a.kind === 'query' ? a.data.timestamp : a.data.timestamp;
+        const tb = b.kind === 'query' ? b.data.timestamp : b.data.timestamp;
+        return tb - ta;
+      }),
+    [requestEntries, historyEvents],
+  );
 
   const isEmpty = timeline.length === 0 && !isLoadingHistory;
 
@@ -71,7 +85,7 @@ export function LogPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">{t('log.title')}</h2>
           {timeline.length > 0 && (
-            <Button variant={ButtonVariant.GHOST} size="sm" onClick={handleClearAll}>
+            <Button variant={ButtonVariant.GHOST} size="sm" onClick={() => setShowClearConfirm(true)}>
               {t('log.clear')}
             </Button>
           )}
@@ -87,9 +101,7 @@ export function LogPage() {
           <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">{loadError}</div>
         )}
 
-        {isEmpty && (
-          <p className="text-sm text-text-muted text-center py-8">{t('log.empty')}</p>
-        )}
+        {isEmpty && <p className="text-sm text-text-muted text-center py-8">{t('log.empty')}</p>}
 
         {timeline.length > 0 && (
           <div className="flex flex-col gap-1 max-h-[600px] overflow-y-auto">
@@ -152,6 +164,19 @@ export function LogPage() {
             )}
           </div>
         )}
+
+        <ConfirmDialog
+          isOpen={showClearConfirm}
+          onClose={() => setShowClearConfirm(false)}
+          title={t('common.confirm_clear_log')}
+          message={t('common.confirm_clear_log_desc')}
+          confirmLabel={t('log.clear')}
+          onConfirm={() => {
+            setShowClearConfirm(false);
+            handleClearAll();
+          }}
+          variant="danger"
+        />
       </Card>
     </ErrorBoundary>
   );

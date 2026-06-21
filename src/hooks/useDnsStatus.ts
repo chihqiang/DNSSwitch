@@ -71,7 +71,9 @@ export function useDnsStatus() {
           addresses: server.addresses,
           dohUrl: server.dohUrl ?? null,
         });
-        logger.info(`Switched to ${server.name} (${server.addresses.length > 0 ? server.addresses.join(', ') : `Chrome DoH: ${server.dohUrl}`})`);
+        logger.info(
+          `Switched to ${server.name} (${server.addresses.length > 0 ? server.addresses.join(', ') : `Chrome DoH: ${server.dohUrl}`})`,
+        );
         useDnsStore.getState().setActiveServer(serverId);
         useToastStore.getState().addToast('success', i18n.t('status.switch_success', { name: server.name }));
         const [, leak] = await Promise.all([
@@ -118,41 +120,38 @@ export function useDnsStatus() {
   }, [fetchStatus]);
 
   /** 测试指定服务器的延迟 */
-  const testLatency = useCallback(
-    async (serverId: string) => {
-      const servers = useDnsStore.getState().servers;
-      const server = servers.find((s) => s.id === serverId);
-      if (!server || server.addresses.length === 0) {
-        useDnsStore.getState().setError(i18n.t('server.no_addresses'));
-        return null;
-      }
+  const testLatency = useCallback(async (serverId: string) => {
+    const servers = useDnsStore.getState().servers;
+    const server = servers.find((s) => s.id === serverId);
+    if (!server || server.addresses.length === 0) {
+      useDnsStore.getState().setError(i18n.t('server.no_addresses'));
+      return null;
+    }
 
-      useDnsStore.getState().setIsTesting(true);
-      useDnsStore.getState().setTestingServerId(serverId);
-      useDnsStore.getState().setError(null);
-      try {
-        const result = await invoke<DnsLatencyTest>('test_dns_latency', {
-          serverId: server.id,
-          address: server.addresses[0],
+    useDnsStore.getState().setIsTesting(true);
+    useDnsStore.getState().setTestingServerId(serverId);
+    useDnsStore.getState().setError(null);
+    try {
+      const result = await invoke<DnsLatencyTest>('test_dns_latency', {
+        serverId: server.id,
+        address: server.addresses[0],
+      });
+      useDnsStore.getState().addLatencyTest(result);
+      if (result.success) {
+        useDnsStore.getState().updateServer(serverId, {
+          latency: result.latencyMs,
         });
-        useDnsStore.getState().addLatencyTest(result);
-        if (result.success) {
-          useDnsStore.getState().updateServer(serverId, {
-            latency: result.latencyMs,
-          });
-        }
-        return result;
-      } catch (e) {
-        logger.error(`Failed to test latency for ${server.name}: ${e}`);
-        useDnsStore.getState().setError(String(e));
-        return null;
-      } finally {
-        useDnsStore.getState().setIsTesting(false);
-        useDnsStore.getState().setTestingServerId(null);
       }
-    },
-    [],
-  );
+      return result;
+    } catch (e) {
+      logger.error(`Failed to test latency for ${server.name}: ${e}`);
+      useDnsStore.getState().setError(String(e));
+      return null;
+    } finally {
+      useDnsStore.getState().setIsTesting(false);
+      useDnsStore.getState().setTestingServerId(null);
+    }
+  }, []);
 
   // 组件挂载时获取当前 DNS 状态
   useEffect(() => {

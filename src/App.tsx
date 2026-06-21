@@ -11,23 +11,38 @@ import { Layout } from '@/components/Layout/Layout';
 import { StatusBar } from '@/components/StatusBar';
 import { ErrorBoundary, LoadingSpinner, ToastContainer } from '@/components/common';
 import { useConfig } from '@/hooks';
-import { useDnsStore } from '@/stores';
+import { useConfigStore, useDnsStore } from '@/stores';
+import { ThemeMode } from '@/types';
 import type { DnsHealthEvent, DnsLatencyUpdate } from '@/types';
 
-const ServersPage = lazy(() => import('@/pages/ServersPage').then(m => ({ default: m.ServersPage })));
-const QueryPage = lazy(() => import('@/pages/QueryPage').then(m => ({ default: m.QueryPage })));
-const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const LogPage = lazy(() => import('@/pages/LogPage').then(m => ({ default: m.LogPage })));
+const ServersPage = lazy(() => import('@/pages/ServersPage').then((m) => ({ default: m.ServersPage })));
+const QueryPage = lazy(() => import('@/pages/QueryPage').then((m) => ({ default: m.QueryPage })));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const LogPage = lazy(() => import('@/pages/LogPage').then((m) => ({ default: m.LogPage })));
 
 function AppContent() {
   const { loadConfig } = useConfig();
   const setHealthStatus = useDnsStore((s) => s.setHealthStatus);
+  const themeMode = useConfigStore((s) => s.config.theme.mode);
 
   // 应用启动时加载配置
   useEffect(() => {
     loadConfig();
     logger.info('DNSSwitch UI started');
   }, [loadConfig]);
+
+  // 根据主题设置（System/Light/Dark）更新 html 属性，覆盖 CSS 变量
+  useEffect(() => {
+    const html = document.documentElement;
+    if (themeMode === ThemeMode.LIGHT) {
+      html.dataset.theme = 'light';
+    } else if (themeMode === ThemeMode.DARK) {
+      html.dataset.theme = 'dark';
+    } else {
+      // System mode: 清除属性，由 prefers-color-scheme 决定
+      delete html.dataset.theme;
+    }
+  }, [themeMode]);
 
   // 监听 DNS 健康检查事件（Rust 后端推送）
   useEffect(() => {
@@ -38,9 +53,11 @@ function AppContent() {
       return () => {};
     });
     return () => {
-      unlistenPromise.then((fn) => fn()).catch((err) => {
-        logger.error(`Failed to unlisten health: ${err}`);
-      });
+      unlistenPromise
+        .then((fn) => fn())
+        .catch((err) => {
+          logger.error(`Failed to unlisten health: ${err}`);
+        });
     };
   }, [setHealthStatus]);
 
@@ -53,14 +70,16 @@ function AppContent() {
       return () => {};
     });
     return () => {
-      unlistenPromise.then((fn) => fn()).catch((err) => {
-        logger.error(`Failed to unlisten latency: ${err}`);
-      });
+      unlistenPromise
+        .then((fn) => fn())
+        .catch((err) => {
+          logger.error(`Failed to unlisten latency: ${err}`);
+        });
     };
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen">
       <Routes>
         <Route element={<Layout />}>
           <Route path="/servers" element={<ServersPage />} />

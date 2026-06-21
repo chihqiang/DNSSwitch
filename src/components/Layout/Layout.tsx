@@ -18,7 +18,7 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col p-4 gap-4">
+    <div className="flex-1 flex flex-col p-4 gap-4 min-h-0">
       {/* 顶部：应用名称 + 导航标签 */}
       <header className="flex items-center justify-between pb-3 border-b border-border">
         <h1 className="text-lg font-bold">{t('app.name')}</h1>

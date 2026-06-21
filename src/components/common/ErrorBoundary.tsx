@@ -4,6 +4,7 @@
 // ============================================================
 
 import { Component, type ReactNode, type ErrorInfo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { logger } from '@/lib/log';
 
 interface Props {
@@ -29,16 +30,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        this.props.fallback ?? (
-          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-            <span className="text-2xl">!</span>
-            <p className="text-sm text-danger font-medium">Something went wrong</p>
-            <p className="text-xs text-text-muted max-w-md">{this.state.error?.message}</p>
-          </div>
-        )
-      );
+      return this.props.fallback ?? <DefaultErrorFallback message={this.state.error?.message} />;
     }
     return this.props.children;
   }
+}
+
+function DefaultErrorFallback({ message }: { message?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+      <span className="text-2xl">!</span>
+      <p className="text-sm text-danger font-medium">{t('common.error_occurred')}</p>
+      {message && <p className="text-xs text-text-muted max-w-md">{message}</p>}
+    </div>
+  );
 }

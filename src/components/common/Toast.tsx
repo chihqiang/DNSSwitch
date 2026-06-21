@@ -23,7 +23,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-80">
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-80" role="alert" aria-live="polite">
       {toasts.map((toast) => (
         <div
           key={toast.id}
@@ -31,10 +31,7 @@ export function ToastContainer() {
           className="flex items-stretch bg-bg-card rounded-lg shadow-lg border border-border overflow-hidden cursor-pointer animate-slide-in"
         >
           {/* 左侧色条 */}
-          <div
-            className="w-1 shrink-0"
-            style={{ backgroundColor: BAR[toast.type] }}
-          />
+          <div className="w-1 shrink-0" style={{ backgroundColor: BAR[toast.type] }} />
           {/* 内容区 */}
           <div className="flex items-center gap-2.5 px-3 py-2.5 flex-1 min-w-0">
             <span

@@ -7,6 +7,18 @@ import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Button, ButtonVariant, Card, Select, EmptyState, ErrorBoundary } from '@/components/common';
+
+/** 将 Rust 后端返回的原始错误信息映射为用户友好提示 */
+function friendlyError(t: ReturnType<typeof useTranslation>['t'], raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('timed out') || lower.includes('timeout')) return t('common.error_timeout');
+  if (lower.includes('connection refused') || lower.includes('actively refused'))
+    return t('common.error_connection_refused');
+  if (lower.includes('dns') && (lower.includes('resolve') || lower.includes('failed')))
+    return t('common.error_dns_resolve');
+  if (lower.includes('invalid') || lower.includes('malformed')) return t('common.error_invalid_response');
+  return raw;
+}
 import { useDnsServers } from '@/hooks';
 import { useRequestLogStore } from '@/stores';
 import type { DnsQueryResult } from '@/types';
@@ -234,7 +246,9 @@ export function QueryPage() {
 
         {/* 错误提示 */}
         {error && (
-          <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">{error}</div>
+          <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">
+            {friendlyError(t, error)}
+          </div>
         )}
 
         {/* 查询结果 */}

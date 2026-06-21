@@ -5,20 +5,23 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { logger } from '@/lib/log';
 import type { SystemInfo, NetworkService } from '@/types';
 
 export function useSystemInfo() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [networkServices, setNetworkServices] = useState<NetworkService[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /** 获取操作系统信息 */
   const fetchSystemInfo = useCallback(async () => {
     try {
       const info = await invoke<SystemInfo>('get_system_info');
       setSystemInfo(info);
-    } catch {
-      /* 静默忽略错误 */
+    } catch (e) {
+      logger.error(`Failed to fetch system info: ${e}`);
+      setError(String(e));
     }
   }, []);
 
@@ -27,8 +30,9 @@ export function useSystemInfo() {
     try {
       const services = await invoke<NetworkService[]>('get_network_services');
       setNetworkServices(services);
-    } catch {
-      /* 静默忽略错误 */
+    } catch (e) {
+      logger.error(`Failed to fetch network services: ${e}`);
+      setError(String(e));
     }
   }, []);
 
@@ -37,5 +41,5 @@ export function useSystemInfo() {
     Promise.all([fetchSystemInfo(), fetchNetworkServices()]).finally(() => setLoading(false));
   }, [fetchSystemInfo, fetchNetworkServices]);
 
-  return { systemInfo, networkServices, loading };
+  return { systemInfo, networkServices, loading, error };
 }

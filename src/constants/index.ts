@@ -31,6 +31,7 @@ export const DNS_BIND_ADDRESS = '0.0.0.0:0';
 
 /** 键盘按键常量 */
 export const KEY_ESCAPE = 'Escape';
+export const KEY_TAB = 'Tab';
 export const KEY_ENTER = 'Enter';
 export const KEY_SPACE = ' ';
 

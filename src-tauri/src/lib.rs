@@ -147,6 +147,7 @@ pub fn run() {
             commands::dns::set_chrome_doh,
             commands::dns::reset_chrome_doh,
             commands::dns::is_chrome_installed,
+            commands::dns::get_chrome_version,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

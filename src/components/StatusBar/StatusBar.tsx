@@ -27,6 +27,13 @@ function StatusBarInner() {
           className={`w-2 h-2 rounded-full shrink-0 ${
             healthStatus === null ? 'bg-text-muted' : healthStatus.healthy ? 'bg-success' : 'bg-danger'
           }`}
+          aria-label={
+            healthStatus === null
+              ? t('common.loading')
+              : healthStatus.healthy
+                ? t('status.healthy')
+                : t('status.unhealthy')
+          }
         />
         <span className="text-text-primary text-xs truncate">
           {activeServer
