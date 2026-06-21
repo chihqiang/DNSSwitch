@@ -3,10 +3,11 @@
 // 统一展示 DNS 查询记录和 DNS 操作历史，合并时间线
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Card, Badge, BadgeVariant, Button, ButtonVariant, LoadingSpinner, ErrorBoundary } from '@/components/common';
+import { logger } from '@/lib/log';
 import { useRequestLogStore } from '@/stores';
 import type { DnsEvent } from '@/types';
 
@@ -43,20 +44,24 @@ export function LogPage() {
   }, [loadHistory]);
 
   // 合并请求日志和操作历史为统一时间线，按时间倒序
-  const timeline: TimelineEntry[] = [
+  const timeline: TimelineEntry[] = useMemo(() => [
     ...requestEntries.map((e): TimelineEntry => ({ kind: 'query' as const, data: e })),
     ...historyEvents.map((e): TimelineEntry => ({ kind: 'event' as const, data: e })),
   ].sort((a, b) => {
     const ta = a.kind === 'query' ? a.data.timestamp : a.data.timestamp;
     const tb = b.kind === 'query' ? b.data.timestamp : b.data.timestamp;
     return tb - ta;
-  });
+  }), [requestEntries, historyEvents]);
 
   const isEmpty = timeline.length === 0 && !isLoadingHistory;
 
   const handleClearAll = async () => {
     useRequestLogStore.getState().clearEntries();
-    await invoke('clear_history');
+    try {
+      await invoke('clear_history');
+    } catch (e) {
+      logger.error(`Failed to clear history: ${e}`);
+    }
     setHistoryEvents([]);
   };
 
@@ -114,8 +119,8 @@ export function LogPage() {
                   {entry.data.detail && <span className="text-danger">{entry.data.detail}</span>}
                   {entry.data.answers.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
-                      {entry.data.answers.map((ans: string, i: number) => (
-                        <code key={i} className="text-xs bg-bg-card px-1.5 py-0.5 rounded">
+                      {entry.data.answers.map((ans: string) => (
+                        <code key={ans} className="text-xs bg-bg-card px-1.5 py-0.5 rounded">
                           {ans}
                         </code>
                       ))}

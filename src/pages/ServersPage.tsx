@@ -21,14 +21,24 @@ export function ServersPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const { addCustomServer, editServer, deleteServer } = useDnsServers();
 
-  /** 编辑服务器 */
-  const handleEdit = (server: DnsServer) => {
+  const handleEdit = useCallback((server: DnsServer) => {
     setEditingServer(server);
     setShowAddServer(true);
-  };
+  }, []);
+
+  const handleAdd = useCallback(() => setShowAddServer(true), []);
+
+  const handleDeleteRequest = useCallback((id: string, name: string) => {
+    setDeleteTarget({ id, name });
+  }, []);
+
+  const closeForm = useCallback(() => {
+    setShowAddServer(false);
+    setEditingServer(null);
+  }, []);
 
   /** 确认删除服务器 */
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     setDeleteError(null);
@@ -40,7 +50,7 @@ export function ServersPage() {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [deleteTarget, deleteServer]);
 
   /** 表单提交（新增或编辑） */
   const handleFormSubmit = useCallback(
@@ -66,17 +76,17 @@ export function ServersPage() {
     [editingServer, addCustomServer, editServer],
   );
 
-  function closeForm() {
-    setShowAddServer(false);
-    setEditingServer(null);
-  }
+  const handleCloseConfirm = useCallback(() => {
+    setDeleteTarget(null);
+    setDeleteError(null);
+  }, []);
 
   return (
     <ErrorBoundary>
       <DnsServerList
         onEdit={handleEdit}
-        onAdd={() => setShowAddServer(true)}
-        onDelete={(id, name) => setDeleteTarget({ id, name })}
+        onAdd={handleAdd}
+        onDelete={handleDeleteRequest}
       />
 
       {/* 添加/编辑服务器弹窗 */}
@@ -91,10 +101,7 @@ export function ServersPage() {
       {/* 删除确认弹窗 */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
-        onClose={() => {
-          setDeleteTarget(null);
-          setDeleteError(null);
-        }}
+        onClose={handleCloseConfirm}
         title={t('common.confirm')}
         message={deleteTarget ? t('common.confirm_delete', { name: deleteTarget.name }) : ''}
         onConfirm={handleDeleteConfirm}

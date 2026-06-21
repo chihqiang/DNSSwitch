@@ -254,8 +254,8 @@ export function QueryPage() {
 
             {result.answers.length > 0 ? (
               <div className="flex flex-col gap-1">
-                {result.answers.map((ans, i) => (
-                  <div key={i} className="px-3 py-2 bg-bg-secondary rounded text-sm font-mono">
+                {result.answers.map((ans) => (
+                  <div key={ans} className="px-3 py-2 bg-bg-secondary rounded text-sm font-mono">
                     {ans}
                   </div>
                 ))}

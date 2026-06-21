@@ -3,20 +3,21 @@
 // 负责：配置加载、Tauri 事件监听（健康检查/延迟更新）、路由、Toast 通知
 // ============================================================
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, lazy } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { listen } from '@tauri-apps/api/event';
 import { logger } from '@/lib/log';
 import { Layout } from '@/components/Layout/Layout';
-import { ServersPage } from '@/pages/ServersPage';
-import { QueryPage } from '@/pages/QueryPage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { LogPage } from '@/pages/LogPage';
 import { StatusBar } from '@/components/StatusBar';
 import { ErrorBoundary, LoadingSpinner, ToastContainer } from '@/components/common';
 import { useConfig } from '@/hooks';
 import { useDnsStore } from '@/stores';
 import type { DnsHealthEvent, DnsLatencyUpdate } from '@/types';
+
+const ServersPage = lazy(() => import('@/pages/ServersPage').then(m => ({ default: m.ServersPage })));
+const QueryPage = lazy(() => import('@/pages/QueryPage').then(m => ({ default: m.QueryPage })));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const LogPage = lazy(() => import('@/pages/LogPage').then(m => ({ default: m.LogPage })));
 
 function AppContent() {
   const { loadConfig } = useConfig();
@@ -30,32 +31,31 @@ function AppContent() {
 
   // 监听 DNS 健康检查事件（Rust 后端推送）
   useEffect(() => {
-    const unlisten = listen<DnsHealthEvent>('dns-health-changed', (event) => {
+    const unlistenPromise = listen<DnsHealthEvent>('dns-health-changed', (event) => {
       setHealthStatus(event.payload);
+    }).catch((err) => {
+      logger.error(`Failed to register health listener: ${err}`);
+      return () => {};
     });
     return () => {
-      unlisten.then((fn) => fn());
+      unlistenPromise.then((fn) => fn()).catch((err) => {
+        logger.error(`Failed to unlisten health: ${err}`);
+      });
     };
   }, [setHealthStatus]);
 
   // 监听全部服务器延迟更新（Rust monitor 推送，替代前端轮询）
   useEffect(() => {
-    const unlisten = listen<DnsLatencyUpdate>('dns-latency-changed', (event) => {
-      const { updateServer, addLatencyTest } = useDnsStore.getState();
-      for (const r of event.payload.results) {
-        if (r.success) {
-          updateServer(r.serverId, { latency: r.latencyMs });
-        }
-        addLatencyTest({
-          serverId: r.serverId,
-          address: '',
-          latencyMs: r.latencyMs,
-          success: r.success,
-        });
-      }
+    const unlistenPromise = listen<DnsLatencyUpdate>('dns-latency-changed', (event) => {
+      useDnsStore.getState().batchUpdateFromMonitor(event.payload.results);
+    }).catch((err) => {
+      logger.error(`Failed to register latency listener: ${err}`);
+      return () => {};
     });
     return () => {
-      unlisten.then((fn) => fn());
+      unlistenPromise.then((fn) => fn()).catch((err) => {
+        logger.error(`Failed to unlisten latency: ${err}`);
+      });
     };
   }, []);
 

@@ -39,6 +39,7 @@ interface DnsState {
   setLatencyTests: (tests: DnsLatencyTest[]) => void;
   addLatencyTest: (test: DnsLatencyTest) => void;
   setLastLeakResult: (result: DnsLeakResult | null) => void;
+  batchUpdateFromMonitor: (results: { serverId: string; latencyMs: number; success: boolean }[]) => void;
   setHealthStatus: (status: DnsHealthEvent | null) => void;
   setIsTesting: (v: boolean) => void;
   setIsSwitching: (v: boolean) => void;
@@ -67,28 +68,37 @@ export const useDnsStore = create<DnsState>((set) => ({
 
   removeServer: (id) => set((state) => ({ servers: state.servers.filter((s) => s.id !== id) })),
 
+  /** 更新服务器属性，值无变化时跳过更新以保持引用稳定 */
   updateServer: (id, updates) =>
-    set((state) => ({
-      servers: state.servers.map((s) => (s.id === id ? { ...s, ...updates, updatedAt: Date.now() } : s)),
-    })),
+    set((state) => {
+      const idx = state.servers.findIndex((s) => s.id === id);
+      if (idx === -1) return {};
+      const existing = state.servers[idx];
+      // latency 值未变化时跳过重建，避免触发订阅组件重渲染
+      if (updates.latency !== undefined && existing.latency === updates.latency) return {};
+      const servers = [...state.servers];
+      servers[idx] = { ...existing, ...updates, updatedAt: Date.now() };
+      return { servers };
+    }),
 
-  /** 设置活跃服务器，同时将其他所有服务器标记为非活跃 */
+  /** 设置活跃服务器，仅更新变更的项以保持引用稳定 */
   setActiveServer: (id) =>
     set((state) => ({
-      servers: state.servers.map((s) => ({
-        ...s,
-        isActive: s.id === id,
-        updatedAt: s.id === id ? Date.now() : s.updatedAt,
-      })),
+      servers: state.servers.map((s) =>
+        s.id === id
+          ? { ...s, isActive: true, updatedAt: Date.now() }
+          : s.isActive
+            ? { ...s, isActive: false }
+            : s,
+      ),
     })),
 
-  /** 清除所有服务器的活跃状态（恢复为系统 DNS 时使用） */
+  /** 清除所有服务器的活跃状态 */
   clearActive: () =>
     set((state) => ({
-      servers: state.servers.map((s) => ({
-        ...s,
-        isActive: false,
-      })),
+      servers: state.servers.map((s) =>
+        s.isActive ? { ...s, isActive: false } : s,
+      ),
     })),
 
   setLatencyTests: (tests) => set({ latencyTests: tests }),
@@ -100,6 +110,32 @@ export const useDnsStore = create<DnsState>((set) => ({
     })),
 
   setLastLeakResult: (result) => set({ lastLeakResult: result }),
+
+  /** 批量更新延迟测试结果（来自 monitor 推送），单次 set() 避免循环触发 listener */
+  batchUpdateFromMonitor: (results: { serverId: string; latencyMs: number; success: boolean }[]) =>
+    set((state) => {
+      let changed = false;
+      const servers = state.servers.map((s) => {
+        const r = results.find((x) => x.serverId === s.id);
+        if (r && r.success && s.latency !== r.latencyMs) {
+          changed = true;
+          return { ...s, latency: r.latencyMs, updatedAt: Date.now() };
+        }
+        return s;
+      });
+      const tests: DnsLatencyTest[] = results.map((r) => ({
+        serverId: r.serverId,
+        address: '',
+        latencyMs: r.latencyMs,
+        success: r.success,
+      }));
+      // 若所有 latency 均无变化，只追加 tests（总量受 MAX_LATENCY_HISTORY 限制）
+      if (!changed && tests.length === 0) return {};
+      return {
+        servers: changed ? servers : state.servers,
+        latencyTests: [...tests, ...state.latencyTests].slice(0, MAX_LATENCY_HISTORY),
+      };
+    }),
 
   setHealthStatus: (status) => set({ healthStatus: status }),
 

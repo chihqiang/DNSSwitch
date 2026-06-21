@@ -3,13 +3,14 @@
 // 显示当前 DNS 状态、健康指示灯、延迟、泄露检测结果等
 // ============================================================
 
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDnsStatus, useDnsServers } from '@/hooks';
 import { Badge, BadgeVariant } from '@/components/common';
 import { getLatencyBadgeVariant } from '@/constants';
 import { useDnsStore } from '@/stores';
 
-export function StatusBar() {
+function StatusBarInner() {
   const { t } = useTranslation();
   const { currentStatus, lastLeakResult } = useDnsStatus();
   const { servers } = useDnsServers();
@@ -60,3 +61,5 @@ export function StatusBar() {
     </div>
   );
 }
+
+export const StatusBar = memo(StatusBarInner);

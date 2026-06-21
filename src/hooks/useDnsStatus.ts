@@ -9,7 +9,6 @@ import { logger } from '@/lib/log';
 import i18n from '@/i18n';
 import { useDnsStore } from '@/stores';
 import { useToastStore } from '@/stores/toastStore';
-import { useDnsServers } from './useDnsServers';
 import type { DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types';
 
 export function useDnsStatus() {
@@ -21,8 +20,6 @@ export function useDnsStatus() {
   const lastLeakResult = useDnsStore((s) => s.lastLeakResult);
   const switchingServerId = useDnsStore((s) => s.switchingServerId);
   const testingServerId = useDnsStore((s) => s.testingServerId);
-
-  const { servers } = useDnsServers();
 
   /** 从系统获取当前 DNS 状态，并匹配服务器列表推断当前活跃服务器 */
   const fetchStatus = useCallback(async () => {
@@ -50,6 +47,7 @@ export function useDnsStatus() {
   /** 切换到指定 DNS 服务器 */
   const switchDns = useCallback(
     async (serverId: string) => {
+      const servers = useDnsStore.getState().servers;
       const server = servers.find((s) => s.id === serverId);
       if (!server) {
         useDnsStore.getState().setError(`${i18n.t('server.not_found', { id: serverId })}`);
@@ -76,11 +74,13 @@ export function useDnsStatus() {
         logger.info(`Switched to ${server.name} (${server.addresses.length > 0 ? server.addresses.join(', ') : `Chrome DoH: ${server.dohUrl}`})`);
         useDnsStore.getState().setActiveServer(serverId);
         useToastStore.getState().addToast('success', i18n.t('status.switch_success', { name: server.name }));
-        await fetchStatus();
-        if (server.addresses.length > 0) {
-          const leak = await invoke<DnsLeakResult>('check_dns_leak', {
-            expectedAddresses: server.addresses,
-          });
+        const [, leak] = await Promise.all([
+          fetchStatus(),
+          server.addresses.length > 0
+            ? invoke<DnsLeakResult>('check_dns_leak', { expectedAddresses: server.addresses })
+            : null,
+        ]);
+        if (leak) {
           useDnsStore.getState().setLastLeakResult(leak);
         }
       } catch (e) {
@@ -93,7 +93,7 @@ export function useDnsStatus() {
         useDnsStore.getState().setSwitchingServerId(null);
       }
     },
-    [servers, fetchStatus],
+    [fetchStatus],
   );
 
   /** 重置为系统默认 DNS */
@@ -120,6 +120,7 @@ export function useDnsStatus() {
   /** 测试指定服务器的延迟 */
   const testLatency = useCallback(
     async (serverId: string) => {
+      const servers = useDnsStore.getState().servers;
       const server = servers.find((s) => s.id === serverId);
       if (!server || server.addresses.length === 0) {
         useDnsStore.getState().setError(i18n.t('server.no_addresses'));
@@ -150,7 +151,7 @@ export function useDnsStatus() {
         useDnsStore.getState().setTestingServerId(null);
       }
     },
-    [servers],
+    [],
   );
 
   // 组件挂载时获取当前 DNS 状态

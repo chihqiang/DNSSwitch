@@ -3,6 +3,7 @@
 // 渲染所有 DNS 服务器的卡片网格，处理切换/测试/编辑/删除操作
 // ============================================================
 
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDnsStatus, useDnsServers } from '@/hooks';
 import { DnsServerCard } from './DnsServerCard';
@@ -20,13 +21,8 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
   const { isSwitching, isTesting, switchingServerId, testingServerId, switchDns, testLatency } = useDnsStatus();
   const { servers, refreshLatency, resetToSystem } = useDnsServers();
 
-  async function handleSwitch(id: string) {
-    await switchDns(id);
-  }
-
-  async function handleTest(id: string) {
-    await testLatency(id);
-  }
+  const handleSwitch = useCallback(async (id: string) => { await switchDns(id); }, [switchDns]);
+  const handleTest = useCallback(async (id: string) => { await testLatency(id); }, [testLatency]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -61,7 +57,6 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         />
       )}
 
-      {/* 响应式网格：自动填充，每列最小 280px */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
         {servers.map((server) => (
           <DnsServerCard

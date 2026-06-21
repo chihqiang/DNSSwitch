@@ -95,8 +95,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     }
   }, [primaryAddr]);
 
-  /** 提交表单 */
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -122,7 +121,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
 
     onSubmit(server);
     if (!isEditing) reset();
-  }
+  }, [editingServer, isEditing, name, primaryAddr, secondaryAddr, dohUrl, dotAddress, onSubmit]);
 
   return (
     <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>

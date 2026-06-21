@@ -3,7 +3,7 @@
 // 包含常规设置、系统信息、工具（导入/导出）三个标签页
 // ============================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { enable as enableAutostart, disable as disableAutostart } from '@tauri-apps/plugin-autostart';
@@ -103,7 +103,7 @@ export function Settings({ onSave }: SettingsProps) {
 
   // ---- 标签页头部 ----
 
-  const tabHeader = (
+  const tabHeader = useMemo(() => (
     <div className="flex gap-1 border-b border-border pb-2">
       {TABS.map((tab) => (
         <button
@@ -119,13 +119,12 @@ export function Settings({ onSave }: SettingsProps) {
         </button>
       ))}
     </div>
-  );
+  ), [activeTab, t]);
 
   // ---- 常规设置标签页 ----
 
-  const generalTab = (
+  const generalTab = useMemo(() => (
     <div className="flex flex-col gap-4">
-      {/* 通用开关 */}
       <section>
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">{t('settings.general')}</h3>
         <div className="flex flex-col gap-2">
@@ -182,7 +181,6 @@ export function Settings({ onSave }: SettingsProps) {
         </div>
       </section>
 
-      {/* 性能设置 */}
       <section>
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
           {t('settings.performance')}
@@ -206,7 +204,6 @@ export function Settings({ onSave }: SettingsProps) {
         </div>
       </section>
 
-      {/* 外观设置 */}
       <section>
         <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
           {t('settings.appearance')}
@@ -252,11 +249,11 @@ export function Settings({ onSave }: SettingsProps) {
         </Button>
       </div>
     </div>
-  );
+  ), [settings, error, isSaving, onSave, t]);
 
   // ---- 系统信息标签页 ----
 
-  const systemTab = (
+  const systemTab = useMemo(() => (
     <div className="flex flex-col gap-4">
       {systemLoading ? (
         <div className="flex items-center justify-center py-8">
@@ -304,11 +301,11 @@ export function Settings({ onSave }: SettingsProps) {
         </>
       )}
     </div>
-  );
+  ), [systemLoading, systemInfo, networkServices, t]);
 
   // ---- 工具标签页 ----
 
-  const toolsTab = (
+  const toolsTab = useMemo(() => (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-text-muted">{t('settings.tools_desc')}</p>
       <div className="flex items-center gap-2">
@@ -320,14 +317,13 @@ export function Settings({ onSave }: SettingsProps) {
         </Button>
       </div>
     </div>
-  );
+  ), [handleExport, handleImport, t]);
 
-  /** 标签页内容映射 */
-  const tabContent: Record<TabKey, React.ReactNode> = {
+  const tabContent: Record<TabKey, React.ReactNode> = useMemo(() => ({
     general: generalTab,
     system: systemTab,
     tools: toolsTab,
-  };
+  }), [generalTab, systemTab, toolsTab]);
 
   return (
     <Card className="flex flex-col gap-3 p-3">
