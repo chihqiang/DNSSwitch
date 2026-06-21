@@ -19,7 +19,7 @@ interface DnsServerListProps {
 
 export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
   const { t } = useTranslation();
-  const { isSwitching, isTesting, switchingServerId, testingServerId, switchDns, testLatency } = useDnsStatus();
+  const { isSwitching, switchingServerId, switchDns, testLatency } = useDnsStatus();
   const { servers, refreshLatency, resetToSystem } = useDnsServers();
   const configLoaded = useConfigStore((s) => s.isLoaded);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -98,7 +98,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
       )}
 
       {servers.length > 0 && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
+        <div className="flex flex-col bg-bg-secondary rounded-lg overflow-hidden">
           {servers.map((server) => (
             <DnsServerCard
               key={server.id}
@@ -108,9 +108,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
               onEdit={onEdit}
               onDelete={onDelete}
               isSwitching={isSwitching}
-              isTesting={isTesting}
               switchingServerId={switchingServerId}
-              testingServerId={testingServerId}
             />
           ))}
         </div>

@@ -1,15 +1,9 @@
-// ============================================================
-// Layout 根布局组件
-// 渲染顶部导航标签栏 + 页面内容区（Outlet）+ 全局错误提示
-// ============================================================
-
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet } from 'react-router-dom';
 
 export function Layout() {
   const { t } = useTranslation();
 
-  /** 导航标签定义 */
   const tabs = [
     { path: '/servers', label: t('tab.servers') },
     { path: '/query', label: t('tab.query') },
@@ -18,20 +12,18 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col p-4 gap-4 min-h-0">
-      {/* 顶部：应用名称 + 导航标签 */}
-      <header className="flex items-center justify-between pb-3 border-b border-border">
-        <h1 className="text-lg font-bold">{t('app.name')}</h1>
-        <nav className="flex rounded-sm border border-border overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0">
+      <header className="flex items-center justify-center px-5 py-2.5 border-b border-border/50">
+        <nav className="flex gap-px bg-border rounded-md p-0.5">
           {tabs.map((tab) => (
             <NavLink
               key={tab.path}
               to={tab.path}
               className={({ isActive }) =>
-                `px-4 py-1.5 text-sm font-medium transition-all duration-150 ${
+                `px-4 py-1 text-[13px] font-medium rounded-[4px] transition-all duration-150 ${
                   isActive
-                    ? 'bg-accent text-white'
-                    : 'bg-bg-card text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`
               }
             >
@@ -41,8 +33,7 @@ export function Layout() {
         </nav>
       </header>
 
-      {/* 页面内容（由 React Router 注入） */}
-      <main className="flex-1 flex flex-col gap-4 overflow-y-auto">
+      <main className="flex-1 flex flex-col gap-4 overflow-y-auto px-5 py-4">
         <Outlet />
       </main>
     </div>

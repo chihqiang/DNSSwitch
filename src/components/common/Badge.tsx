@@ -13,7 +13,7 @@ interface BadgeProps {
 
 /** 各变体对应的 Tailwind CSS 类名 */
 const variantClasses: Record<BadgeVariant, string> = {
-  [BadgeVariant.DEFAULT]: 'bg-bg-secondary text-text-muted',
+  [BadgeVariant.DEFAULT]: 'bg-bg-card text-text-muted',
   [BadgeVariant.SUCCESS]: 'bg-success-bg text-success',
   [BadgeVariant.WARNING]: 'bg-warning-bg text-warning',
   [BadgeVariant.DANGER]: 'bg-danger-bg text-danger',

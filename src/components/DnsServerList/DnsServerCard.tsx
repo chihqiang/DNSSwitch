@@ -1,12 +1,7 @@
-// ============================================================
-// DnsServerCard DNS 服务器卡片组件
-// 展示单个 DNS 服务器的信息及操作按钮（切换、测试、编辑、删除）
-// ============================================================
-
 import { useTranslation } from 'react-i18next';
-import { memo } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import type { DnsServer } from '@/types';
-import { Card, Badge, Button, ButtonVariant, BadgeVariant } from '@/components/common';
+import { Badge, Button, ButtonVariant, BadgeVariant } from '@/components/common';
 import { getLatencyBadgeVariant } from '@/constants';
 
 interface DnsServerCardProps {
@@ -16,9 +11,7 @@ interface DnsServerCardProps {
   onEdit: (server: DnsServer) => void;
   onDelete: (id: string, name: string) => void;
   isSwitching: boolean;
-  isTesting: boolean;
   switchingServerId: string | null;
-  testingServerId: string | null;
 }
 
 export const DnsServerCard = memo(function DnsServerCard({
@@ -28,37 +21,59 @@ export const DnsServerCard = memo(function DnsServerCard({
   onEdit,
   onDelete,
   isSwitching,
-  isTesting,
   switchingServerId,
-  testingServerId,
 }: DnsServerCardProps) {
   const { t } = useTranslation();
   const latency = server.latency;
-  // 仅当前卡片对应的服务器在切换/测试时才显示 loading 状态
   const isThisSwitching = isSwitching && switchingServerId === server.id;
-  const isThisTesting = isTesting && testingServerId === server.id;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   return (
-    <Card className={`flex flex-col gap-3 p-3 ${server.isActive ? 'border-success' : ''}`}>
-      {/* 服务器名称与激活状态 */}
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="text-sm font-semibold">{server.name}</h3>
-          <span className="text-xs text-text-muted">{t('dns_provider.' + server.provider.name)}</span>
-        </div>
-        {server.isActive && <Badge variant={BadgeVariant.SUCCESS}>{t('common.active')}</Badge>}
-      </div>
+    <div
+      className={`group flex items-start gap-3 px-4 py-3 border-b border-border/50 last:border-b-0 transition-colors duration-150 ${
+        server.isActive ? 'bg-accent-light/20' : 'hover:bg-bg-card'
+      }`}
+    >
+      <div
+        className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+          server.isActive ? 'bg-accent' : 'bg-text-muted/40'
+        }`}
+      />
 
-      {/* IP 地址列表 */}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap gap-1">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text-primary truncate">
+            {server.name}
+          </span>
+          <span className="text-xs text-text-muted/70 truncate">
+            {t('dns_provider.' + server.provider.name)}
+          </span>
+          {server.isActive && (
+            <span className="text-[10px] font-medium text-accent uppercase tracking-wider">
+              {t('common.active')}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {server.addresses.map((addr) => (
-            <code key={addr}>{addr}</code>
+            <code key={addr} className="text-xs text-text-secondary">
+              {addr}
+            </code>
           ))}
-        </div>
-
-        {/* 延迟、标签、协议支持 */}
-        <div className="flex flex-wrap gap-1">
           {latency !== undefined && (
             <Badge variant={getLatencyBadgeVariant(latency)}>
               {t('status.latency_ms', { latency: Math.round(latency) })}
@@ -74,8 +89,7 @@ export const DnsServerCard = memo(function DnsServerCard({
         </div>
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex gap-1.5 pt-3 border-t border-border">
+      <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity duration-150">
         {!server.isActive && (server.addresses.length > 0 || server.dohUrl) && (
           <Button
             variant={ButtonVariant.PRIMARY}
@@ -88,27 +102,48 @@ export const DnsServerCard = memo(function DnsServerCard({
           </Button>
         )}
         {!server.isActive && server.addresses.length === 0 && !server.dohUrl && (
-          <span className="text-xs text-text-muted self-center">{t('server.no_ip_hint')}</span>
+          <span className="text-xs text-text-muted self-center mr-1">{t('server.no_ip_hint')}</span>
         )}
-        <Button
-          variant={ButtonVariant.GHOST}
-          size="sm"
-          onClick={() => onTest(server.id)}
-          disabled={isTesting}
-          isLoading={isThisTesting}
-        >
-          {t('common.test')}
-        </Button>
-        <Button variant={ButtonVariant.GHOST} size="sm" onClick={() => onEdit(server)}>
-          {t('common.edit')}
-        </Button>
-        {/* 系统默认服务器不可删除 */}
-        {!server.isSystem && (
-          <Button variant={ButtonVariant.DANGER} size="sm" onClick={() => onDelete(server.id, server.name)}>
-            {t('common.delete')}
+
+        <div className="relative" ref={menuRef}>
+          <Button
+            variant={ButtonVariant.GHOST}
+            size="sm"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+              <circle cx="8" cy="3" r="1.5" />
+              <circle cx="8" cy="8" r="1.5" />
+              <circle cx="8" cy="13" r="1.5" />
+            </svg>
           </Button>
-        )}
+
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 min-w-[120px] bg-bg-card border border-border rounded-md shadow-lg py-1 z-10 animate-fadeIn">
+              <button
+                className="w-full text-left px-3 py-1.5 text-sm text-text-primary hover:bg-border/30 transition-colors"
+                onClick={() => { onTest(server.id); setMenuOpen(false); }}
+              >
+                {t('common.test')}
+              </button>
+              <button
+                className="w-full text-left px-3 py-1.5 text-sm text-text-primary hover:bg-border/30 transition-colors"
+                onClick={() => { onEdit(server); setMenuOpen(false); }}
+              >
+                {t('common.edit')}
+              </button>
+              {!server.isSystem && (
+                <button
+                  className="w-full text-left px-3 py-1.5 text-sm text-danger hover:bg-danger-bg transition-colors"
+                  onClick={() => { onDelete(server.id, server.name); setMenuOpen(false); }}
+                >
+                  {t('common.delete')}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </Card>
+    </div>
   );
 });

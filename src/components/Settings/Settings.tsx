@@ -1,8 +1,3 @@
-// ============================================================
-// Settings 设置面板组件
-// 包含常规设置、系统信息、工具（导入/导出）三个标签页
-// ============================================================
-
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
@@ -42,7 +37,7 @@ type TabKey = (typeof TABS)[number]['key'];
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5">
+    <div className="flex items-center gap-2 px-4 py-2">
       <span className="text-xs text-text-muted w-20 shrink-0">{label}</span>
       <span className="text-xs text-text-primary truncate">{value}</span>
     </div>
@@ -51,7 +46,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 function SettingsGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-bg-secondary rounded-lg overflow-hidden [&>*+*]:border-t [&>*+*]:border-border">
+    <div className="bg-bg-secondary rounded-lg overflow-hidden [&>*+*]:border-t [&>*+*]:border-border/50">
       {children}
     </div>
   );
@@ -120,23 +115,20 @@ export function Settings({ onSave }: SettingsProps) {
 
   const tabHeader = useMemo(
     () => (
-      <div className="flex gap-1">
+      <div className="flex gap-px bg-border rounded-md p-0.5 self-start">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
             <button
               key={tab.key}
-              className={`relative px-4 py-2 text-sm transition-colors duration-150 ${
+              className={`px-3.5 py-1 text-[13px] font-medium rounded-[4px] transition-all duration-150 ${
                 isActive
-                  ? 'text-accent font-medium'
+                  ? 'bg-accent text-white shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
               onClick={() => setActiveTab(tab.key)}
             >
               {t(tab.labelKey)}
-              {isActive && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
-              )}
             </button>
           );
         })}
@@ -147,13 +139,14 @@ export function Settings({ onSave }: SettingsProps) {
 
   const generalTab = useMemo(
     () => (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <section>
-          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
             {t('settings.general')}
           </h3>
           <SettingsGroup>
-            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+            <label className="flex items-center justify-between px-4 py-2 cursor-pointer select-none hover:bg-bg-card transition-colors duration-150">
+              <span className="text-sm">{t('settings.auto_start')}</span>
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-accent rounded shrink-0"
@@ -171,52 +164,51 @@ export function Settings({ onSave }: SettingsProps) {
                   }
                 }}
               />
-              <span className="text-sm">{t('settings.auto_start')}</span>
             </label>
 
-            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+            <label className="flex items-center justify-between px-4 py-2 cursor-pointer select-none hover:bg-bg-card transition-colors duration-150">
+              <span className="text-sm">{t('settings.minimize_to_tray')}</span>
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-accent rounded shrink-0"
                 checked={settings.minimizeToTray}
                 onChange={(e) => useConfigStore.getState().updateSettings({ minimizeToTray: e.target.checked })}
               />
-              <span className="text-sm">{t('settings.minimize_to_tray')}</span>
             </label>
 
-            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+            <label className="flex items-center justify-between px-4 py-2 cursor-pointer select-none hover:bg-bg-card transition-colors duration-150">
+              <span className="text-sm">{t('settings.notify_on_switch')}</span>
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-accent rounded shrink-0"
                 checked={settings.notifyOnSwitch}
                 onChange={(e) => useConfigStore.getState().updateSettings({ notifyOnSwitch: e.target.checked })}
               />
-              <span className="text-sm">{t('settings.notify_on_switch')}</span>
             </label>
 
-            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+            <label className="flex items-center justify-between px-4 py-2 cursor-pointer select-none hover:bg-bg-card transition-colors duration-150">
+              <span className="text-sm">{t('settings.check_updates')}</span>
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-accent rounded shrink-0"
                 checked={settings.checkUpdates}
                 onChange={(e) => useConfigStore.getState().updateSettings({ checkUpdates: e.target.checked })}
               />
-              <span className="text-sm">{t('settings.check_updates')}</span>
             </label>
           </SettingsGroup>
         </section>
 
-        <section>
-          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+        <section className="mt-4">
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
             {t('settings.performance')}
           </h3>
           <SettingsGroup>
-            <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer select-none hover:bg-border/30 transition-colors duration-150">
+            <label className="flex items-center justify-between px-4 py-2 cursor-pointer select-none hover:bg-bg-card transition-colors duration-150">
               <span className="text-sm">{t('settings.latency_interval')}</span>
-              <span className="ml-auto flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5">
                 <input
                   type="number"
-                  className="px-2 py-1 border border-border rounded bg-bg-card text-text-primary text-sm w-14 text-center"
+                  className="px-2 py-1 border border-border/50 rounded bg-bg-card text-text-primary text-sm w-14 text-center focus:outline-none focus:ring-2 focus:ring-accent"
                   value={Math.round(settings.latencyCheckInterval / 1000)}
                   min={LATENCY_CHECK_INTERVAL_MIN_S}
                   max={LATENCY_CHECK_INTERVAL_MAX_S}
@@ -234,14 +226,14 @@ export function Settings({ onSave }: SettingsProps) {
           </SettingsGroup>
         </section>
 
-        <section>
-          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+        <section className="mt-4">
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
             {t('settings.appearance')}
           </h3>
           <SettingsGroup>
-            <div className="px-3.5 py-2.5">
-              <span className="text-sm block mb-2">{t('settings.language')}</span>
-              <div className="flex gap-3">
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-sm">{t('settings.language')}</span>
+              <div className="flex gap-2">
                 {LANGUAGES.map((lng) => {
                   const selected = i18n.language.startsWith(lng.value);
                   return (
@@ -250,7 +242,7 @@ export function Settings({ onSave }: SettingsProps) {
                       className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer select-none transition-colors duration-150 ${
                         selected
                           ? 'bg-accent text-white'
-                          : 'bg-bg-card text-text-secondary border border-border hover:border-accent hover:text-text-primary'
+                          : 'bg-bg-card text-text-secondary border border-border/50 hover:border-accent hover:text-text-primary'
                       }`}
                     >
                       <input
@@ -267,9 +259,9 @@ export function Settings({ onSave }: SettingsProps) {
               </div>
             </div>
 
-            <div className="px-3.5 py-2.5">
-              <span className="text-sm block mb-2">{t('settings.theme_mode')}</span>
-              <div className="flex gap-3">
+            <div className="flex items-center justify-between px-4 py-2 border-t border-border/50">
+              <span className="text-sm">{t('settings.theme_mode')}</span>
+              <div className="flex gap-2">
                 {THEME_OPTIONS.map((opt) => {
                   const selected = config.theme.mode === opt.value;
                   return (
@@ -278,7 +270,7 @@ export function Settings({ onSave }: SettingsProps) {
                       className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer select-none transition-colors duration-150 ${
                         selected
                           ? 'bg-accent text-white'
-                          : 'bg-bg-card text-text-secondary border border-border hover:border-accent hover:text-text-primary'
+                          : 'bg-bg-card text-text-secondary border border-border/50 hover:border-accent hover:text-text-primary'
                       }`}
                     >
                       <input
@@ -313,7 +305,7 @@ export function Settings({ onSave }: SettingsProps) {
 
   const systemTab = useMemo(
     () => (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {systemLoading ? (
           <div className="flex items-center justify-center py-10">
             <LoadingSpinner size={20} />
@@ -328,19 +320,13 @@ export function Settings({ onSave }: SettingsProps) {
 
             {currentStatus && (
               <section>
-                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
                   {t('settings.current_dns')}
                 </h3>
                 <SettingsGroup>
                   <InfoRow label={t('settings.network_service')} value={currentStatus.networkService} />
-                  <InfoRow
-                    label={t('settings.dns_servers')}
-                    value={currentStatus.currentServers.join(', ')}
-                  />
-                  <InfoRow
-                    label={t('settings.dns_status')}
-                    value={currentStatus.isCustom ? t('common.custom') : t('settings.system_default')}
-                  />
+                  <InfoRow label={t('settings.dns_servers')} value={currentStatus.currentServers.join(', ')} />
+                  <InfoRow label={t('settings.dns_status')} value={currentStatus.isCustom ? t('common.custom') : t('settings.system_default')} />
                   {currentStatus.latency !== undefined && (
                     <InfoRow label={t('settings.latency_interval')} value={t('status.latency_ms', { latency: Math.round(currentStatus.latency) })} />
                   )}
@@ -348,22 +334,16 @@ export function Settings({ onSave }: SettingsProps) {
               </section>
             )}
 
-            <section>
-              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+            <section className={currentStatus ? 'mt-4' : ''}>
+              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
                 {t('settings.chrome')}
               </h3>
               <SettingsGroup>
-                <InfoRow
-                  label={t('settings.dns_status')}
-                  value={chromeInstalled ? t('settings.chrome_installed') : t('settings.chrome_not_installed')}
-                />
+                <InfoRow label={t('settings.dns_status')} value={chromeInstalled ? t('settings.chrome_installed') : t('settings.chrome_not_installed')} />
                 {chromeInstalled && chromeVersion && (
                   <InfoRow label={t('settings.chrome_version')} value={chromeVersion} />
                 )}
-                <InfoRow
-                  label={t('settings.chrome_doh')}
-                  value={currentStatus?.chromeDohUrl ? t('common.enabled') : t('common.disabled')}
-                />
+                <InfoRow label={t('settings.chrome_doh')} value={currentStatus?.chromeDohUrl ? t('common.enabled') : t('common.disabled')} />
                 {currentStatus?.chromeDohUrl && (
                   <InfoRow label={t('settings.chrome_doh_url')} value={currentStatus.chromeDohUrl} />
                 )}
@@ -371,8 +351,8 @@ export function Settings({ onSave }: SettingsProps) {
             </section>
 
             {systemInfo && (
-              <section>
-                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+              <section className="mt-4">
+                <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
                   {t('settings.system_info')}
                 </h3>
                 <SettingsGroup>
@@ -384,8 +364,8 @@ export function Settings({ onSave }: SettingsProps) {
               </section>
             )}
 
-            <section>
-              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-1.5 px-0.5">
+            <section className={systemInfo ? 'mt-4' : ''}>
+              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
                 {t('settings.network_services')}
               </h3>
               {networkServices.length > 0 ? (
@@ -393,21 +373,21 @@ export function Settings({ onSave }: SettingsProps) {
                   {networkServices.map((svc) => (
                     <div
                       key={svc.name}
-                      className="flex items-center gap-2 px-3.5 py-2.5 cursor-default hover:bg-border/30 transition-colors duration-150"
+                      className="flex items-center justify-between px-4 py-2 cursor-default hover:bg-bg-card transition-colors duration-150"
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`}
-                      />
-                      <span className="text-xs text-text-primary">{svc.displayName}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`} />
+                        <span className="text-xs text-text-primary">{svc.displayName}</span>
+                      </div>
                       {svc.dnsServers.length > 0 && (
-                        <span className="text-xs text-text-muted ml-auto">{svc.dnsServers.join(', ')}</span>
+                        <span className="text-xs text-text-muted shrink-0">{svc.dnsServers.join(', ')}</span>
                       )}
                     </div>
                   ))}
                 </SettingsGroup>
               ) : (
                 !systemLoading && (
-                  <p className="text-xs text-text-muted px-3 py-5 text-center">
+                  <p className="text-xs text-text-muted px-4 py-5 text-center bg-bg-secondary rounded-lg">
                     {t('settings.network_services_empty')}
                   </p>
                 )
@@ -422,16 +402,25 @@ export function Settings({ onSave }: SettingsProps) {
 
   const toolsTab = useMemo(
     () => (
-      <div className="flex flex-col gap-3">
-        <p className="text-sm text-text-secondary">{t('settings.tools_desc')}</p>
-        <div className="flex items-center gap-2">
-          <Button variant={ButtonVariant.SECONDARY} onClick={handleExport} isLoading={isExporting}>
-            {isExporting ? t('common.exporting') : t('settings.export')}
-          </Button>
-          <Button variant={ButtonVariant.SECONDARY} onClick={handleImport} isLoading={isImporting}>
-            {isImporting ? t('common.importing') : t('settings.import')}
-          </Button>
-        </div>
+      <div className="flex flex-col gap-4">
+        <section>
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-[0.05em] mb-2 px-0.5">
+            {t('settings.tools')}
+          </h3>
+          <SettingsGroup>
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-sm">{t('settings.tools_desc')}</span>
+              <div className="flex items-center gap-2">
+                <Button variant={ButtonVariant.SECONDARY} onClick={handleExport} isLoading={isExporting}>
+                  {isExporting ? t('common.exporting') : t('settings.export')}
+                </Button>
+                <Button variant={ButtonVariant.SECONDARY} onClick={handleImport} isLoading={isImporting}>
+                  {isImporting ? t('common.importing') : t('settings.import')}
+                </Button>
+              </div>
+            </div>
+          </SettingsGroup>
+        </section>
       </div>
     ),
     [handleExport, handleImport, isExporting, isImporting, t],
@@ -447,12 +436,9 @@ export function Settings({ onSave }: SettingsProps) {
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
       {tabHeader}
-      <div className="border-t border-border" />
-      <div className="pt-1">
-        {tabContent[activeTab]}
-      </div>
+      {tabContent[activeTab]}
     </div>
   );
 }

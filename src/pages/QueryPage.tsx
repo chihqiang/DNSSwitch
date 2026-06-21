@@ -1,14 +1,11 @@
-// ============================================================
-// QueryPage DNS 查询工具页面
-// 支持 UDP / DoH / DoT 三种协议，多种记录类型查询
-// ============================================================
-
 import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { Button, ButtonVariant, Card, Select, EmptyState, ErrorBoundary } from '@/components/common';
+import { Button, ButtonVariant, EmptyState, ErrorBoundary } from '@/components/common';
+import { useDnsServers } from '@/hooks';
+import { useRequestLogStore } from '@/stores';
+import type { DnsQueryResult } from '@/types';
 
-/** 将 Rust 后端返回的原始错误信息映射为用户友好提示 */
 function friendlyError(t: ReturnType<typeof useTranslation>['t'], raw: string): string {
   const lower = raw.toLowerCase();
   if (lower.includes('timed out') || lower.includes('timeout')) return t('common.error_timeout');
@@ -19,11 +16,7 @@ function friendlyError(t: ReturnType<typeof useTranslation>['t'], raw: string): 
   if (lower.includes('invalid') || lower.includes('malformed')) return t('common.error_invalid_response');
   return raw;
 }
-import { useDnsServers } from '@/hooks';
-import { useRequestLogStore } from '@/stores';
-import type { DnsQueryResult } from '@/types';
 
-/** DNS 记录类型选项 */
 const RECORD_TYPES = [
   { value: 'A', label: 'A' },
   { value: 'AAAA', label: 'AAAA' },
@@ -34,21 +27,18 @@ const RECORD_TYPES = [
   { value: 'SOA', label: 'SOA' },
 ];
 
-/** 查询协议选项 */
 const PROTOCOLS = [
   { value: 'udp', label: 'UDP' },
   { value: 'doh', label: 'DoH' },
   { value: 'dot', label: 'DoT' },
 ];
 
-/** 各协议对应的端点输入标签 */
 const ENDPOINT_LABELS: Record<string, string> = {
   udp: 'DNS Server',
   doh: 'DoH URL',
   dot: 'DoT Address',
 };
 
-/** 各协议对应的输入占位符 */
 const ENDPOINT_PLACEHOLDERS: Record<string, string> = {
   udp: '1.1.1.1',
   doh: 'https://dns.example.com/dns-query',
@@ -67,7 +57,6 @@ export function QueryPage() {
   const [error, setError] = useState<string | null>(null);
   const addLogEntry = useRequestLogStore((s) => s.addEntry);
 
-  /** 根据协议和已有服务器列表生成快速选择选项 */
   const serverOptions = useMemo(() => {
     if (protocol === 'udp') {
       return servers
@@ -85,7 +74,6 @@ export function QueryPage() {
 
   const hasEndpoint = endpoint.trim().length > 0;
 
-  /** 执行 DNS 查询 */
   const handleQuery = useCallback(async () => {
     if (!domain.trim()) return;
     const ep = endpoint.trim() || serverOptions[0]?.value;
@@ -117,7 +105,6 @@ export function QueryPage() {
         });
       }
       setResult(res);
-      // 记录成功日志
       addLogEntry({
         id: `log-${Date.now()}`,
         timestamp: Date.now(),
@@ -132,7 +119,6 @@ export function QueryPage() {
       });
     } catch (e) {
       setError(String(e));
-      // 记录失败日志
       addLogEntry({
         id: `log-${Date.now()}`,
         timestamp: Date.now(),
@@ -153,16 +139,15 @@ export function QueryPage() {
 
   return (
     <ErrorBoundary>
-      <Card className="flex flex-col gap-4 p-4">
-        <h2 className="text-sm font-semibold">{t('query.title')}</h2>
-
-        <div className="flex flex-col gap-3">
-          {/* 第一行：域名 + 记录类型 + 协议 */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 bg-bg-secondary rounded-lg p-4">
           <div className="flex items-end gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-xs text-text-secondary">{t('query.domain')}</label>
+              <label className="text-[11px] font-medium text-text-muted uppercase tracking-[0.05em]">
+                {t('query.domain')}
+              </label>
               <input
-                className="px-2.5 py-1.5 text-sm bg-bg-secondary border border-border rounded focus:outline-none focus:ring-2 focus:ring-accent w-full"
+                className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent w-full"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleQuery()}
@@ -170,39 +155,56 @@ export function QueryPage() {
               />
             </div>
 
-            <Select
-              label={t('query.record_type')}
-              options={RECORD_TYPES}
-              value={recordType}
-              onChange={(e) => setRecordType(e.target.value)}
-            />
-
-            <div className="flex flex-col gap-1.5 min-w-[90px]">
-              <label className="text-xs text-text-secondary">{t('query.protocol')}</label>
+            <div className="flex flex-col gap-1.5 min-w-[80px]">
+              <label className="text-[11px] font-medium text-text-muted uppercase tracking-[0.05em]">
+                {t('query.record_type')}
+              </label>
               <select
-                className="px-2.5 py-1.5 text-sm bg-bg-secondary border border-border rounded focus:outline-none focus:ring-2 focus:ring-accent"
-                value={protocol}
-                onChange={(e) => {
-                  setProtocol(e.target.value);
-                  setEndpoint('');
-                }}
+                className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent"
+                value={recordType}
+                onChange={(e) => setRecordType(e.target.value)}
               >
-                {PROTOCOLS.map((opt) => (
+                {RECORD_TYPES.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
               </select>
             </div>
+
+            <div className="flex flex-col gap-1.5 min-w-[80px]">
+              <label className="text-[11px] font-medium text-text-muted uppercase tracking-[0.05em]">
+                {t('query.protocol')}
+              </label>
+              <div className="flex gap-px bg-border rounded overflow-hidden">
+                {PROTOCOLS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`px-3 py-1.5 text-sm transition-colors duration-150 ${
+                      protocol === opt.value
+                        ? 'bg-accent text-white'
+                        : 'bg-bg-card text-text-secondary hover:text-text-primary'
+                    }`}
+                    onClick={() => {
+                      setProtocol(opt.value);
+                      setEndpoint('');
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* 第二行：端点地址 + 查询按钮 + 快速选择 */}
           <div className="flex items-end gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-xs text-text-secondary">{ENDPOINT_LABELS[protocol]}</label>
+              <label className="text-[11px] font-medium text-text-muted uppercase tracking-[0.05em]">
+                {ENDPOINT_LABELS[protocol]}
+              </label>
               <div className="flex gap-2">
                 <input
-                  className="px-2.5 py-1.5 text-sm bg-bg-secondary border border-border rounded focus:outline-none focus:ring-2 focus:ring-accent flex-1 min-w-0"
+                  className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent flex-1 min-w-0"
                   value={endpoint}
                   onChange={(e) => setEndpoint(e.target.value)}
                   placeholder={ENDPOINT_PLACEHOLDERS[protocol]}
@@ -218,12 +220,13 @@ export function QueryPage() {
               </div>
             </div>
 
-            {/* 快速选择下拉框 */}
             {serverOptions.length > 0 && (
               <div className="flex flex-col gap-1.5 min-w-[180px]">
-                <label className="text-xs text-text-secondary">{t('query.quick_select')}</label>
+                <label className="text-[11px] font-medium text-text-muted uppercase tracking-[0.05em]">
+                  {t('query.quick_select')}
+                </label>
                 <select
-                  className="px-2.5 py-1.5 text-sm bg-bg-secondary border border-border rounded focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent"
                   value={hasEndpoint && serverOptions.some((o) => o.value === endpoint) ? endpoint : ''}
                   onChange={(e) => setEndpoint(e.target.value)}
                 >
@@ -239,47 +242,52 @@ export function QueryPage() {
           </div>
         </div>
 
-        {/* 无服务器时的空状态提示 */}
         {servers.length === 0 && (
           <EmptyState icon="~" title={t('query.no_servers_title')} description={t('query.no_servers_desc')} />
         )}
 
-        {/* 错误提示 */}
         {error && (
-          <div className="px-3 py-2 bg-danger-bg text-danger border border-danger/20 rounded text-xs">
+          <div className="px-3.5 py-2 bg-danger-bg text-danger border border-danger/20 rounded-lg text-xs">
             {friendlyError(t, error)}
           </div>
         )}
 
-        {/* 查询结果 */}
         {result && (
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3 text-xs text-text-secondary">
-              <span>
-                {t('query.server')}: {result.server}
+            <div className="flex items-center gap-4 text-xs text-text-secondary">
+              <span className="flex items-center gap-1.5">
+                <span className="text-text-muted">{t('query.server')}:</span>
+                <span className="text-text-primary font-medium">{result.server}</span>
               </span>
-              <span>
-                {t('query.latency')}: {Math.round(result.latencyMs)}ms
+              <span className="flex items-center gap-1.5">
+                <span className="text-text-muted">{t('query.latency')}:</span>
+                <span className="text-text-primary font-medium">{Math.round(result.latencyMs)}ms</span>
               </span>
-              <span>
-                {t('query.record_type')}: {result.recordType}
+              <span className="flex items-center gap-1.5">
+                <span className="text-text-muted">{t('query.record_type')}:</span>
+                <span className="text-text-primary font-medium">{result.recordType}</span>
               </span>
             </div>
 
             {result.answers.length > 0 ? (
-              <div className="flex flex-col gap-1">
-                {result.answers.map((ans) => (
-                  <div key={ans} className="px-3 py-2 bg-bg-secondary rounded text-sm font-mono">
+              <div className="flex flex-col bg-bg-secondary rounded-lg overflow-hidden">
+                {result.answers.map((ans, i) => (
+                  <div
+                    key={i}
+                    className="px-3.5 py-2.5 text-sm font-mono text-text-primary border-t border-border/50 first:border-t-0 hover:bg-border/30 transition-colors"
+                  >
                     {ans}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="px-3 py-2 bg-bg-secondary rounded text-sm text-text-muted">{t('query.no_results')}</div>
+              <div className="px-3.5 py-5 text-sm text-text-muted text-center bg-bg-secondary rounded-lg">
+                {t('query.no_results')}
+              </div>
             )}
           </div>
         )}
-      </Card>
+      </div>
     </ErrorBoundary>
   );
 }

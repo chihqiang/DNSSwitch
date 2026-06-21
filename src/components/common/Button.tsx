@@ -21,7 +21,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   [ButtonVariant.SECONDARY]: 'bg-bg-secondary text-text-primary border-border hover:bg-border',
   [ButtonVariant.DANGER]: 'bg-danger text-white border-danger hover:opacity-90',
   [ButtonVariant.GHOST]:
-    'bg-transparent text-text-secondary border-transparent hover:bg-bg-secondary hover:text-text-primary',
+    'bg-transparent text-text-secondary border-transparent hover:bg-border/30 hover:text-text-primary',
 };
 
 /** 各尺寸对应的 Tailwind CSS 类名 */
