@@ -74,8 +74,9 @@ export const useDnsStore = create<DnsState>((set) => ({
       const idx = state.servers.findIndex((s) => s.id === id);
       if (idx === -1) return {};
       const existing = state.servers[idx];
-      // latency 值未变化时跳过重建，避免触发订阅组件重渲染
-      if (updates.latency !== undefined && existing.latency === updates.latency) return {};
+      const keys = Object.keys(updates);
+      // 仅当只传了 latency 且未变化时才跳过（防止同一批次中丢弃其他字段）
+      if (keys.length === 1 && 'latency' in updates && existing.latency === updates.latency) return {};
       const servers = [...state.servers];
       servers[idx] = { ...existing, ...updates, updatedAt: Date.now() };
       return { servers };

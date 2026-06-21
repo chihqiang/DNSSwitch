@@ -135,7 +135,6 @@ export default {
     auto_start: 'Auto-start on login',
     minimize_to_tray: 'Minimize to system tray',
     notify_on_switch: 'Show notification on DNS switch',
-    check_updates: 'Check for updates automatically',
     latency_interval: 'Latency check interval (seconds)',
     save: 'Save Settings',
     language: 'Language',

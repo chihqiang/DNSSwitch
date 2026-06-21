@@ -134,7 +134,6 @@ export default {
     auto_start: '开机自启',
     minimize_to_tray: '最小化到系统托盘',
     notify_on_switch: 'DNS 切换时显示通知',
-    check_updates: '自动检查更新',
     latency_interval: '延迟检查间隔（秒）',
     save: '保存设置',
     language: '语言',

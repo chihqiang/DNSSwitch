@@ -29,8 +29,6 @@ export interface AppSettings {
   autoStart: boolean;
   /** 最小化到系统托盘 */
   minimizeToTray: boolean;
-  /** 自动检查更新 */
-  checkUpdates: boolean;
   /** DNS 切换时显示通知 */
   notifyOnSwitch: boolean;
   /** 延迟检查间隔（毫秒） */
@@ -49,7 +47,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   settings: {
     autoStart: false,
     minimizeToTray: true,
-    checkUpdates: true,
     notifyOnSwitch: true,
     latencyCheckInterval: DEFAULT_LATENCY_CHECK_INTERVAL_MS,
   },

@@ -186,15 +186,6 @@ export function Settings({ onSave }: SettingsProps) {
               />
             </label>
 
-            <label className="flex items-center justify-between px-4 py-2 cursor-pointer select-none hover:bg-bg-card transition-colors duration-150">
-              <span className="text-sm">{t('settings.check_updates')}</span>
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-accent rounded shrink-0"
-                checked={settings.checkUpdates}
-                onChange={(e) => useConfigStore.getState().updateSettings({ checkUpdates: e.target.checked })}
-              />
-            </label>
           </SettingsGroup>
         </section>
 
@@ -328,7 +319,7 @@ export function Settings({ onSave }: SettingsProps) {
                   <InfoRow label={t('settings.dns_servers')} value={currentStatus.currentServers.join(', ')} />
                   <InfoRow label={t('settings.dns_status')} value={currentStatus.isCustom ? t('common.custom') : t('settings.system_default')} />
                   {currentStatus.latency !== undefined && (
-                    <InfoRow label={t('settings.latency_interval')} value={t('status.latency_ms', { latency: Math.round(currentStatus.latency) })} />
+                    <InfoRow label={t('status.latency')} value={t('status.latency_ms', { latency: Math.round(currentStatus.latency) })} />
                   )}
                 </SettingsGroup>
               </section>

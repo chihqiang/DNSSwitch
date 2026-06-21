@@ -37,8 +37,6 @@ pub struct AppSettings {
     pub auto_start: bool,
     /// 关闭时最小化到托盘
     pub minimize_to_tray: bool,
-    /// 自动检查更新
-    pub check_updates: bool,
     /// DNS 切换时显示通知
     pub notify_on_switch: bool,
     /// 延迟检查间隔（毫秒）
@@ -53,7 +51,7 @@ pub struct ThemeConfig {
     pub mode: String,
 }
 
-/// 默认配置：调度关闭，最小化托盘开启，自动更新和通知开启
+/// 默认配置：调度关闭，最小化托盘开启，通知开启
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -63,7 +61,6 @@ impl Default for AppConfig {
             settings: AppSettings {
                 auto_start: false,
                 minimize_to_tray: true,
-                check_updates: true,
                 notify_on_switch: true,
                 latency_check_interval: DEFAULT_LATENCY_CHECK_INTERVAL_MS,
             },
