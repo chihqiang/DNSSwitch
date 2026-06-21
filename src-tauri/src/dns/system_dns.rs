@@ -116,14 +116,6 @@ fn run_cmd(program: &str, args: &[&str]) -> Result<String, AppError> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-#[allow(dead_code)]
-fn run_cmd_timeout(program: &str, args: &[&str], timeout_secs: u64) -> Result<String, AppError> {
-    let mut cmd = Command::new(program);
-    cmd.args(args);
-    let output = run_with_timeout(&mut cmd, timeout_secs)?;
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
-}
-
 // ============================================================================
 // 平台实现
 // ============================================================================
@@ -336,10 +328,34 @@ mod platform {
     fn run_with_pkexec(program: &str, args: &[&str]) -> Result<(), AppError> {
         let mut all = vec![program];
         all.extend(args);
-        let mut cmd = std::process::Command::new("pkexec");
-        cmd.args(&all);
-        super::run_with_timeout(&mut cmd, super::DNS_SWITCH_TIMEOUT_SECS)?;
-        Ok(())
+
+        let mut run_as_root = |launcher: &str, launcher_args: &[&str]| -> Result<(), AppError> {
+            let mut cmd = std::process::Command::new(launcher);
+            cmd.args(launcher_args).args(&all);
+            super::run_with_timeout(&mut cmd, super::DNS_SWITCH_TIMEOUT_SECS)
+        };
+
+        // Try pkexec (GNOME), then sudo with askpass, then kdesudo (KDE)
+        let candidates: &[(&str, &[&str])] = &[
+            ("pkexec", &[]),
+            ("sudo", &["-A"]),
+            ("kdesudo", &[]),
+        ];
+
+        for (launcher, extra_args) in candidates {
+            if std::process::Command::new(launcher)
+                .arg("--version")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+            {
+                return run_as_root(launcher, extra_args);
+            }
+        }
+
+        Err(AppError::new(
+            "No privilege escalation tool found (try: pkexec, sudo -A, or kdesudo)"
+        ))
     }
 }
 
@@ -367,10 +383,9 @@ mod platform {
     pub fn set_dns(addresses: &[&str]) -> Result<(), AppError> {
         let iface = get_active_iface()?;
         log::info!("[dns:win] netsh set dns on \"{}\": {:?}", iface, addresses);
-        // 第一个地址用 static，后续用 add
-        super::run_cmd_timeout("netsh", &["interface", "ip", "set", "dns", &iface, "static", addresses[0]], super::DNS_SWITCH_TIMEOUT_SECS)?;
+        run_netsh(&["interface", "ip", "set", "dns", &iface, "static", addresses[0]])?;
         for addr in &addresses[1..] {
-            super::run_cmd_timeout("netsh", &["interface", "ip", "add", "dns", &iface, addr, "index=2"], super::DNS_SWITCH_TIMEOUT_SECS)?;
+            run_netsh(&["interface", "ip", "add", "dns", &iface, addr, "index=2"])?;
         }
         Ok(())
     }
@@ -378,7 +393,26 @@ mod platform {
     pub fn reset_dns() -> Result<(), AppError> {
         let iface = get_active_iface()?;
         log::info!("[dns:win] netsh reset dns on \"{}\"", iface);
-        super::run_cmd_timeout("netsh", &["interface", "ip", "set", "dns", &iface, "dhcp"], super::DNS_SWITCH_TIMEOUT_SECS)?;
+        run_netsh(&["interface", "ip", "set", "dns", &iface, "dhcp"])?;
+        Ok(())
+    }
+
+    /// Run netsh with admin elevation via PowerShell Start-Process
+    fn run_netsh(args: &[&str]) -> Result<(), AppError> {
+        let arg_str = args.join(" ");
+        let ps_script = format!(
+            "Start-Process netsh -ArgumentList '{}' -Verb RunAs -Wait -WindowStyle Hidden",
+            arg_str.replace('\'', "''")
+        );
+        let output = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", &ps_script])
+            .output()
+            .map_err(|e| AppError::new(format!("Failed to start elevated netsh: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(AppError::new(format!("netsh elevation failed: {}", stderr.trim())));
+        }
         Ok(())
     }
 

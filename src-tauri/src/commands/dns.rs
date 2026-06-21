@@ -137,13 +137,19 @@ pub fn switch_dns_inner(
     }
 }
 
-/// 发送 macOS 通知（仅在用户开启通知设置时发送）
-fn send_notification(_app_handle: &tauri::AppHandle, title: &str, body: &str) {
+use tauri_plugin_notification::NotificationExt;
+
+/// 发送系统通知（跨平台，仅在用户开启通知设置时发送）
+fn send_notification(app_handle: &tauri::AppHandle, title: &str, body: &str) {
     let config = crate::config::load_config().ok();
     if config.map(|c| c.settings.notify_on_switch).unwrap_or(false) {
-        let _ = std::process::Command::new("osascript")
-            .args(["-e", &format!("display notification \"{}\" with title \"{}\"", body, title)])
-            .output();
+        if let Err(e) = app_handle.notification().builder()
+            .title(title)
+            .body(body)
+            .show()
+        {
+            log::error!("[dns] Failed to send notification: {}", e);
+        }
     }
 }
 

@@ -11,6 +11,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
+use directories::BaseDirs;
+
 use crate::error::AppError;
 use types::{AppConfig, DATA_DIR};
 
@@ -20,12 +22,9 @@ static CACHED_CONFIG: RwLock<Option<AppConfig>> = RwLock::new(None);
 /// 获取应用数据目录路径：
 /// macOS/Linux: ~/.dnsswitch
 /// Windows: %USERPROFILE%\.dnsswitch
-/// 回退到当前工作目录
 pub fn data_dir() -> Result<PathBuf, AppError> {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    Ok(PathBuf::from(home).join(DATA_DIR))
+    let base = BaseDirs::new().ok_or_else(|| AppError::new("Cannot find home directory"))?;
+    Ok(base.home_dir().join(DATA_DIR))
 }
 
 /// 获取配置文件路径：~/.dnsswitch/config.json
