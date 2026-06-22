@@ -89,7 +89,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         address: addr,
         latencyMs: 0,
         success: false,
-        error: 'Test failed',
+        error: t('server.unreachable'),
       });
     } finally {
       setIsTesting(false);
@@ -113,8 +113,8 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         addresses,
         provider: editingServer?.provider ?? {
           name: 'custom',
-          displayName: 'Custom',
-          description: 'Custom DNS server',
+          displayName: t('dns_provider.custom'),
+          description: t('dns_provider.custom'),
         },
         isActive: editingServer?.isActive ?? false,
         isSystem: editingServer?.isSystem ?? false,
@@ -217,7 +217,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
           className={`px-3 py-2 rounded text-xs ${testResult.success ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}
         >
           {testResult.success
-            ? `${t('server.reachable')} - ${Math.round(testResult.latencyMs)}ms`
+            ? `${t('server.reachable')} - ${t('status.latency_ms', { latency: Math.round(testResult.latencyMs) })}`
             : testResult.error || t('server.unreachable')}
         </div>
       )}

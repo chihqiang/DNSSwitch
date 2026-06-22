@@ -33,16 +33,16 @@ const PROTOCOLS = [
   { value: 'dot', label: 'DoT' },
 ];
 
-const ENDPOINT_LABELS: Record<string, string> = {
-  udp: 'DNS Server',
-  doh: 'DoH URL',
-  dot: 'DoT Address',
+const ENDPOINT_LABEL_KEYS: Record<string, string> = {
+  udp: 'query.endpoint_udp',
+  doh: 'query.endpoint_doh',
+  dot: 'query.endpoint_dot',
 };
 
-const ENDPOINT_PLACEHOLDERS: Record<string, string> = {
-  udp: '1.1.1.1',
-  doh: 'https://dns.example.com/dns-query',
-  dot: '1.1.1.1',
+const ENDPOINT_PLACEHOLDER_KEYS: Record<string, string> = {
+  udp: 'query.placeholder_udp',
+  doh: 'query.placeholder_doh',
+  dot: 'query.placeholder_dot',
 };
 
 export function QueryPage() {
@@ -200,14 +200,14 @@ export function QueryPage() {
           <div className="flex items-end gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="text-[11px] font-medium text-text-muted uppercase tracking-[0.05em]">
-                {ENDPOINT_LABELS[protocol]}
+                {t(ENDPOINT_LABEL_KEYS[protocol])}
               </label>
               <div className="flex gap-2">
                 <input
                   className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent flex-1 min-w-0"
                   value={endpoint}
                   onChange={(e) => setEndpoint(e.target.value)}
-                  placeholder={ENDPOINT_PLACEHOLDERS[protocol]}
+                  placeholder={t(ENDPOINT_PLACEHOLDER_KEYS[protocol])}
                 />
                 <Button
                   variant={ButtonVariant.PRIMARY}
@@ -261,7 +261,7 @@ export function QueryPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="text-text-muted">{t('query.latency')}:</span>
-                <span className="text-text-primary font-medium">{Math.round(result.latencyMs)}ms</span>
+                <span className="text-text-primary font-medium">{t('status.latency_ms', { latency: Math.round(result.latencyMs) })}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="text-text-muted">{t('query.record_type')}:</span>

@@ -1,16 +1,10 @@
-// ============================================================
-// DNS 事件历史持久化
-// 将 DNS 切换、重置等事件记录到 ~/.dnsswitch/history.json
-// 最多保留最近 200 条记录
-// ============================================================
-
-use std::fs;
-use std::path::PathBuf;
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config;
 use crate::error::AppError;
+
+static EVENTS: Mutex<Option<Vec<DnsEvent>>> = Mutex::new(None);
 
 /// DNS 操作事件记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,50 +16,95 @@ pub struct DnsEvent {
     pub addresses: Vec<String>,
     pub latency_ms: Option<f64>,
     pub success: bool,
-    /// 失败或附加信息
     pub detail: Option<String>,
     pub timestamp: u64,
 }
 
-/// 获取历史记录文件路径：~/.dnsswitch/history.json
-fn history_path() -> Result<PathBuf, AppError> {
-    Ok(config::data_dir()?.join("history.json"))
+fn events() -> Vec<DnsEvent> {
+    EVENTS.lock().unwrap().clone().unwrap_or_default()
 }
 
-/// 加载全部历史事件
+fn set_events(list: Vec<DnsEvent>) {
+    *EVENTS.lock().unwrap() = Some(list);
+}
+
+/// 加载全部历史事件（当前 session 内存，非持久化）
 pub fn load_history() -> Result<Vec<DnsEvent>, AppError> {
-    let path = history_path()?;
+    Ok(events())
+}
+
+/// 添加事件：写入日志 + 内存（保留最近 200 条）
+pub fn add_event(event: DnsEvent) -> Result<(), AppError> {
+    let detail_str = event.detail.as_deref().unwrap_or("");
+    let latency_str = event
+        .latency_ms
+        .map(|l| format!("{:.1}ms", l))
+        .unwrap_or_default();
+    let addrs = event.addresses.join(", ");
+
+    log::info!(
+        "[history] {}|{}|{}|{}|{}|{}",
+        event.event_type,
+        if event.success { "success" } else { "FAIL" },
+        event.server_name,
+        addrs,
+        latency_str,
+        detail_str
+    );
+
+    let mut list = events();
+    list.insert(0, event);
+    list.truncate(200);
+    set_events(list);
+    Ok(())
+}
+
+/// 清空历史
+pub fn clear_history() -> Result<(), AppError> {
+    set_events(Vec::new());
+    Ok(())
+}
+
+/// 迁移旧的 history.json 到日志文件（启动时调用）
+pub fn migrate_from_file() {
+    let path = match crate::config::data_dir() {
+        Ok(d) => d.join("history.json"),
+        Err(_) => return,
+    };
     if !path.exists() {
-        return Ok(Vec::new());
+        return;
     }
-    let content = match fs::read_to_string(&path) {
+    let content = match std::fs::read_to_string(&path) {
         Ok(c) => c,
         Err(e) => {
-            log::error!("[history] Failed to read history file: {}", e);
-            return Err(AppError::new(e.to_string()));
+            log::warn!("[history] Failed to read old history.json: {}", e);
+            return;
         }
     };
-    let events: Vec<DnsEvent> = serde_json::from_str(&content)
-        .inspect_err(|e| log::error!("[history] Failed to parse history: {}", e))?;
-    Ok(events)
-}
-
-/// 添加事件到历史记录（插入到最前，截断至 200 条）
-pub fn add_event(event: DnsEvent) -> Result<(), AppError> {
-    let mut events = load_history()?;
-    events.insert(0, event);
-    events.truncate(200);
-    save_history(&events)
-}
-
-/// 保存事件列表到磁盘
-pub fn save_history(events: &[DnsEvent]) -> Result<(), AppError> {
-    let path = history_path()?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+    let events: Vec<DnsEvent> = match serde_json::from_str(&content) {
+        Ok(e) => e,
+        Err(e) => {
+            log::warn!("[history] Failed to parse old history.json: {}", e);
+            return;
+        }
+    };
+    for event in &events {
+        let latency = event.latency_ms.map(|l| format!("{:.1}ms", l)).unwrap_or_default();
+        let addrs = event.addresses.join(", ");
+        log::info!(
+            "[history:migrated] {}|{}|{}|{}|{}|{}|{}",
+            event.event_type,
+            if event.success { "success" } else { "FAIL" },
+            event.server_name,
+            addrs,
+            latency,
+            event.detail.as_deref().unwrap_or(""),
+            event.timestamp,
+        );
     }
-    let content = serde_json::to_string_pretty(events)?;
-    fs::write(&path, content)
-        .inspect_err(|e| log::error!("[history] Failed to write history: {}", e))?;
-    Ok(())
+    if let Err(e) = std::fs::remove_file(&path) {
+        log::warn!("[history] Failed to remove old history.json: {}", e);
+    } else {
+        log::info!("[history] Migrated {} events from history.json, file removed", events.len());
+    }
 }

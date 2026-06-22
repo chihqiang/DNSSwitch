@@ -55,6 +55,9 @@ pub fn run() {
 
     log::info!("dnsswitch starting");
 
+    // 迁移旧的 history.json 到日志文件
+    dns::history::migrate_from_file();
+
     tauri::Builder::default()
         // 文件/URL 打开插件
         .plugin(tauri_plugin_opener::init())
@@ -118,6 +121,9 @@ pub fn run() {
         // 注册所有 Tauri 命令处理器（供前端 invoke 调用）
         .invoke_handler(tauri::generate_handler![
             logger::log_message,
+            logger::read_log_file,
+            logger::clear_log_file,
+            logger::clear_all_logs,
             commands::dns::get_current_dns,
             commands::dns::switch_dns,
             commands::dns::reset_system_dns,

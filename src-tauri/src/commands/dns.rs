@@ -232,7 +232,7 @@ pub fn get_history() -> Result<Vec<history::DnsEvent>, String> {
 /// 清空 DNS 历史记录
 #[tauri::command(rename_all = "camelCase")]
 pub fn clear_history() -> Result<(), String> {
-    history::save_history(&[]).map_err(|e| e.message)
+    history::clear_history().map_err(|e| e.message)
 }
 
 /// 通过指定 DNS 服务器解析域名（UDP 53 端口）
