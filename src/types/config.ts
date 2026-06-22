@@ -19,6 +19,8 @@ export interface AppConfig {
   servers: DnsServer[];
   /** 当前激活的 DNS 服务器 ID（undefined 表示使用系统默认） */
   activeServerId?: string;
+  /** Chrome DoH 当前激活的服务器 ID */
+  activeChromeServerId?: string;
   settings: AppSettings;
   theme: ThemeConfig;
 }

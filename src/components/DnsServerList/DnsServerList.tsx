@@ -1,14 +1,11 @@
-// ============================================================
-// DnsServerList DNS 服务器列表组件
-// 渲染所有 DNS 服务器的卡片网格，处理切换/测试/编辑/删除操作
-// ============================================================
-
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDnsStatus, useDnsServers } from '@/hooks';
+import { invoke } from '@tauri-apps/api/core';
 import { DnsServerCard } from './DnsServerCard';
 import { Button, ButtonVariant, EmptyState, LoadingSpinner, ConfirmDialog } from '@/components/common';
 import { useConfigStore } from '@/stores';
+import { useToastStore } from '@/stores/toastStore';
 import type { DnsServer } from '@/types';
 
 interface DnsServerListProps {
@@ -19,18 +16,45 @@ interface DnsServerListProps {
 
 export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
   const { t } = useTranslation();
-  const { isSwitching, switchingServerId, switchDns, testLatency } = useDnsStatus();
+  const {
+    currentStatus,
+    isSwitching,
+    switchingServerId,
+    switchDns,
+    switchChromeDoh,
+    testLatency,
+    fetchStatus,
+    chromeSwitchingServerId,
+  } = useDnsStatus();
   const { servers, refreshLatency, resetToSystem } = useDnsServers();
   const configLoaded = useConfigStore((s) => s.isLoaded);
+  const activeChromeServerId = useConfigStore((s) => s.config.activeChromeServerId);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showChromeResetConfirm, setShowChromeResetConfirm] = useState(false);
+  const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
+  const [pendingChromeSwitchId, setPendingChromeSwitchId] = useState<string | null>(null);
 
-  const handleSwitch = useCallback(
-    async (id: string) => {
-      await switchDns(id);
-    },
-    [switchDns],
-  );
+  const handleSwitchRequest = useCallback((id: string) => {
+    setPendingSwitchId(id);
+  }, []);
+
+  const handleChromeSwitchRequest = useCallback((id: string) => {
+    setPendingChromeSwitchId(id);
+  }, []);
+
+  const handleConfirmSwitch = useCallback(async () => {
+    const id = pendingSwitchId;
+    setPendingSwitchId(null);
+    if (id) await switchDns(id);
+  }, [pendingSwitchId, switchDns]);
+
+  const handleConfirmChromeSwitch = useCallback(async () => {
+    const id = pendingChromeSwitchId;
+    setPendingChromeSwitchId(null);
+    if (id) await switchChromeDoh(id);
+  }, [pendingChromeSwitchId, switchChromeDoh]);
+
   const handleTest = useCallback(
     async (id: string) => {
       await testLatency(id);
@@ -55,6 +79,26 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
     }
   }, [resetToSystem]);
 
+  const handleChromeReset = useCallback(async () => {
+    try {
+      await invoke('reset_chrome_doh');
+      const { config: currentConfig } = useConfigStore.getState();
+      useConfigStore.getState().setConfig({ ...currentConfig, activeChromeServerId: undefined });
+      await fetchStatus();
+      useToastStore.getState().addToast('success', t('status.chrome_reset'));
+    } catch (e) {
+      useToastStore.getState().addToast('error', String(e));
+    } finally {
+      setShowChromeResetConfirm(false);
+    }
+  }, [t, fetchStatus]);
+
+  const pendingServer = pendingSwitchId ? servers.find((s) => s.id === pendingSwitchId) : null;
+
+  const pendingChromeServer = pendingChromeSwitchId ? servers.find((s) => s.id === pendingChromeSwitchId) : null;
+
+  const chromeDohActive = !!activeChromeServerId;
+  const chromeInstalled = currentStatus?.chromeInstalled ?? false;
   const isLoading = !configLoaded;
 
   return (
@@ -67,6 +111,11 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
               <Button variant={ButtonVariant.GHOST} size="sm" onClick={() => setShowResetConfirm(true)}>
                 {t('server.reset_system')}
               </Button>
+              {chromeDohActive && chromeInstalled && (
+                <Button variant={ButtonVariant.GHOST} size="sm" onClick={() => setShowChromeResetConfirm(true)}>
+                  {t('server.reset_chrome')}
+                </Button>
+              )}
               <Button variant={ButtonVariant.GHOST} size="sm" onClick={handleRefresh} isLoading={isRefreshing}>
                 {t('server.refresh_latency')}
               </Button>
@@ -103,12 +152,16 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
             <DnsServerCard
               key={server.id}
               server={server}
-              onSwitch={handleSwitch}
+              onSwitch={handleSwitchRequest}
+              onSwitchChromeDoh={handleChromeSwitchRequest}
               onTest={handleTest}
               onEdit={onEdit}
               onDelete={onDelete}
               isSwitching={isSwitching}
               switchingServerId={switchingServerId}
+              chromeSwitchingServerId={chromeSwitchingServerId}
+              chromeDohActive={!!server.dohUrl && server.id === activeChromeServerId}
+              chromeInstalled={chromeInstalled}
             />
           ))}
         </div>
@@ -122,6 +175,36 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         confirmLabel={t('server.reset_system')}
         onConfirm={handleResetConfirm}
         variant={ButtonVariant.SECONDARY}
+      />
+
+      <ConfirmDialog
+        isOpen={showChromeResetConfirm}
+        onClose={() => setShowChromeResetConfirm(false)}
+        title={t('common.confirm_reset_chrome')}
+        message={t('common.confirm_reset_chrome_desc')}
+        confirmLabel={t('server.reset_chrome')}
+        onConfirm={handleChromeReset}
+        variant={ButtonVariant.SECONDARY}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingSwitchId !== null}
+        onClose={() => setPendingSwitchId(null)}
+        title={t('common.confirm_switch_dns')}
+        message={pendingServer ? t('common.confirm_switch_dns_desc', { name: pendingServer.name }) : ''}
+        confirmLabel={t('common.switch')}
+        onConfirm={handleConfirmSwitch}
+        variant={ButtonVariant.PRIMARY}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingChromeSwitchId !== null}
+        onClose={() => setPendingChromeSwitchId(null)}
+        title={t('common.confirm_switch_chrome')}
+        message={pendingChromeServer ? t('common.confirm_switch_chrome_desc', { name: pendingChromeServer.name }) : ''}
+        confirmLabel={t('common.chrome_doh')}
+        onConfirm={handleConfirmChromeSwitch}
+        variant={ButtonVariant.PRIMARY}
       />
     </div>
   );

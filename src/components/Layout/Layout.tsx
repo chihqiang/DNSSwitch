@@ -21,9 +21,7 @@ export function Layout() {
               to={tab.path}
               className={({ isActive }) =>
                 `px-4 py-1 text-[13px] font-medium rounded-[4px] transition-all duration-150 ${
-                  isActive
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-text-secondary hover:text-text-primary'
+                  isActive ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
                 }`
               }
             >

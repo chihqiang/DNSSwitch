@@ -58,6 +58,17 @@ export function useDnsServers() {
         useDnsStore.getState().setActiveServer(currentConfig.activeServerId);
       }
 
+      // 恢复 Chrome DoH 状态
+      if (currentConfig.activeChromeServerId) {
+        const chromeServer = dnsServers.find((s) => s.id === currentConfig.activeChromeServerId);
+        if (chromeServer?.dohUrl) {
+          const status = useDnsStore.getState().currentStatus;
+          if (status) {
+            useDnsStore.getState().setCurrentStatus({ ...status, chromeDohUrl: chromeServer.dohUrl });
+          }
+        }
+      }
+
       // 同步到 config.servers 以保持向后兼容
       if (currentConfig.servers.length === 0) {
         useConfigStore.getState().setConfig({ ...currentConfig, servers: dnsServers });
@@ -140,7 +151,9 @@ export function useDnsServers() {
       await invoke('reset_system_dns');
       useDnsStore.getState().clearActive();
       const { config: currentConfig } = useConfigStore.getState();
-      useConfigStore.getState().setConfig({ ...currentConfig, activeServerId: undefined });
+      useConfigStore
+        .getState()
+        .setConfig({ ...currentConfig, activeServerId: undefined, activeChromeServerId: undefined });
       logger.info('System DNS reset to default');
     } catch (e) {
       logger.error(`Failed to reset system DNS: ${e}`);

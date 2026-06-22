@@ -122,16 +122,12 @@ export function LogPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-text-muted/70 mt-1">
-                    <span className="text-text-muted/50">
-                      {entry.data.protocol.toUpperCase()}
-                    </span>
+                    <span className="text-text-muted/50">{entry.data.protocol.toUpperCase()}</span>
                     <span>→</span>
                     <span className="truncate">{entry.data.server}</span>
                     <span>{Math.round(entry.data.latencyMs)}ms</span>
                   </div>
-                  {entry.data.detail && (
-                    <div className="text-danger mt-1">{entry.data.detail}</div>
-                  )}
+                  {entry.data.detail && <div className="text-danger mt-1">{entry.data.detail}</div>}
                   {entry.data.answers.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {entry.data.answers.map((ans: string) => (
@@ -165,9 +161,7 @@ export function LogPage() {
                     {entry.data.latencyMs !== undefined && <span>{Math.round(entry.data.latencyMs)}ms</span>}
                     <span className="text-text-muted/50">{entry.data.addresses.join(', ')}</span>
                   </div>
-                  {entry.data.detail && (
-                    <div className="text-text-muted/50 mt-1">{entry.data.detail}</div>
-                  )}
+                  {entry.data.detail && <div className="text-text-muted/50 mt-1">{entry.data.detail}</div>}
                 </div>
               ),
             )}

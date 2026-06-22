@@ -25,6 +25,9 @@ pub struct AppConfig {
     /// 当前激活的 DNS 服务器 ID（None 表示使用系统默认 DNS）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_server_id: Option<String>,
+    /// Chrome DoH 当前激活的服务器 ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_chrome_server_id: Option<String>,
     pub settings: AppSettings,
     pub theme: ThemeConfig,
 }
@@ -58,6 +61,7 @@ impl Default for AppConfig {
             version: CONFIG_VERSION,
             servers: Vec::new(),
             active_server_id: None,
+            active_chrome_server_id: None,
             settings: AppSettings {
                 auto_start: false,
                 minimize_to_tray: true,

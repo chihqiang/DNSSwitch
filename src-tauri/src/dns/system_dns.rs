@@ -27,6 +27,7 @@ pub fn get_current_dns_status() -> Result<DnsStatus, AppError> {
         is_custom: true,
         latency: None,
         chrome_doh_url: chrome_doh,
+        chrome_installed: super::chrome_dns::is_chrome_installed(),
     })
 }
 

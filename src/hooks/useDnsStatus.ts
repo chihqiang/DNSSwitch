@@ -7,7 +7,7 @@ import { useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '@/lib/log';
 import i18n from '@/i18n';
-import { useDnsStore } from '@/stores';
+import { useDnsStore, useConfigStore } from '@/stores';
 import { useToastStore } from '@/stores/toastStore';
 import type { DnsStatus, DnsLatencyTest, DnsLeakResult } from '@/types';
 
@@ -19,6 +19,7 @@ export function useDnsStatus() {
   const error = useDnsStore((s) => s.error);
   const lastLeakResult = useDnsStore((s) => s.lastLeakResult);
   const switchingServerId = useDnsStore((s) => s.switchingServerId);
+  const chromeSwitchingServerId = useDnsStore((s) => s.chromeSwitchingServerId);
   const testingServerId = useDnsStore((s) => s.testingServerId);
 
   /** 从系统获取当前 DNS 状态，并匹配服务器列表推断当前活跃服务器 */
@@ -44,7 +45,7 @@ export function useDnsStatus() {
     }
   }, []);
 
-  /** 切换到指定 DNS 服务器 */
+  /** 切换到指定 DNS 服务器（仅系统 DNS） */
   const switchDns = useCallback(
     async (serverId: string) => {
       const servers = useDnsStore.getState().servers;
@@ -54,9 +55,8 @@ export function useDnsStatus() {
         return;
       }
 
-      // 纯 DoH 服务器：无 IP 地址时检查 Chrome 是否可用
-      if (server.addresses.length === 0 && !server.dohUrl) {
-        useDnsStore.getState().setError(i18n.t('server.no_dns_config'));
+      if (server.addresses.length === 0) {
+        useDnsStore.getState().setError(i18n.t('server.no_addresses'));
         return;
       }
 
@@ -69,18 +69,13 @@ export function useDnsStatus() {
           serverId: server.id,
           serverName: server.name,
           addresses: server.addresses,
-          dohUrl: server.dohUrl ?? null,
         });
-        logger.info(
-          `Switched to ${server.name} (${server.addresses.length > 0 ? server.addresses.join(', ') : `Chrome DoH: ${server.dohUrl}`})`,
-        );
+        logger.info(`Switched system DNS to ${server.name} (${server.addresses.join(', ')})`);
         useDnsStore.getState().setActiveServer(serverId);
         useToastStore.getState().addToast('success', i18n.t('status.switch_success', { name: server.name }));
         const [, leak] = await Promise.all([
           fetchStatus(),
-          server.addresses.length > 0
-            ? invoke<DnsLeakResult>('check_dns_leak', { expectedAddresses: server.addresses })
-            : null,
+          invoke<DnsLeakResult>('check_dns_leak', { expectedAddresses: server.addresses }),
         ]);
         if (leak) {
           useDnsStore.getState().setLastLeakResult(leak);
@@ -93,6 +88,35 @@ export function useDnsStatus() {
       } finally {
         useDnsStore.getState().setIsSwitching(false);
         useDnsStore.getState().setSwitchingServerId(null);
+      }
+    },
+    [fetchStatus],
+  );
+
+  /** 切换 Chrome DoH 到指定服务器 */
+  const switchChromeDoh = useCallback(
+    async (serverId: string) => {
+      const servers = useDnsStore.getState().servers;
+      const server = servers.find((s) => s.id === serverId);
+      if (!server || !server.dohUrl) {
+        useToastStore.getState().addToast('error', i18n.t('server.no_doh_url'));
+        return;
+      }
+
+      useDnsStore.getState().setChromeSwitchingServerId(serverId);
+      try {
+        await invoke('set_chrome_doh', { dohUrl: server.dohUrl, serverId });
+        logger.info(`Set Chrome DoH to ${server.name} (${server.dohUrl})`);
+        const { config: currentConfig } = useConfigStore.getState();
+        useConfigStore.getState().setConfig({ ...currentConfig, activeChromeServerId: serverId });
+        useToastStore.getState().addToast('success', i18n.t('status.chrome_switched', { name: server.name }));
+        await fetchStatus();
+      } catch (e) {
+        const msg = String(e);
+        logger.error(`Failed to set Chrome DoH: ${msg}`);
+        useToastStore.getState().addToast('error', msg);
+      } finally {
+        useDnsStore.getState().setChromeSwitchingServerId(null);
       }
     },
     [fetchStatus],
@@ -163,11 +187,13 @@ export function useDnsStatus() {
     isTesting,
     isSwitching,
     switchingServerId,
+    chromeSwitchingServerId,
     testingServerId,
     error,
     lastLeakResult,
     fetchStatus,
     switchDns,
+    switchChromeDoh,
     resetToSystem,
     testLatency,
   };

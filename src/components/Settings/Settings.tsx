@@ -67,8 +67,12 @@ export function Settings({ onSave }: SettingsProps) {
   const { settings } = config;
 
   useEffect(() => {
-    invoke<boolean>('is_chrome_installed').then(setChromeInstalled).catch(() => {});
-    invoke<string | null>('get_chrome_version').then(setChromeVersion).catch(() => {});
+    invoke<boolean>('is_chrome_installed')
+      .then(setChromeInstalled)
+      .catch(() => {});
+    invoke<string | null>('get_chrome_version')
+      .then(setChromeVersion)
+      .catch(() => {});
   }, []);
 
   const handleExport = useCallback(async () => {
@@ -109,9 +113,12 @@ export function Settings({ onSave }: SettingsProps) {
     }
   }, [t]);
 
-  const handleLanguageChange = useCallback((lng: string) => {
-    i18n.changeLanguage(lng);
-  }, [i18n]);
+  const handleLanguageChange = useCallback(
+    (lng: string) => {
+      i18n.changeLanguage(lng);
+    },
+    [i18n],
+  );
 
   const tabHeader = useMemo(
     () => (
@@ -122,9 +129,7 @@ export function Settings({ onSave }: SettingsProps) {
             <button
               key={tab.key}
               className={`px-3.5 py-1 text-[13px] font-medium rounded-[4px] transition-all duration-150 ${
-                isActive
-                  ? 'bg-accent text-white shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary'
+                isActive ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
               }`}
               onClick={() => setActiveTab(tab.key)}
             >
@@ -185,7 +190,6 @@ export function Settings({ onSave }: SettingsProps) {
                 onChange={(e) => useConfigStore.getState().updateSettings({ notifyOnSwitch: e.target.checked })}
               />
             </label>
-
           </SettingsGroup>
         </section>
 
@@ -317,9 +321,15 @@ export function Settings({ onSave }: SettingsProps) {
                 <SettingsGroup>
                   <InfoRow label={t('settings.network_service')} value={currentStatus.networkService} />
                   <InfoRow label={t('settings.dns_servers')} value={currentStatus.currentServers.join(', ')} />
-                  <InfoRow label={t('settings.dns_status')} value={currentStatus.isCustom ? t('common.custom') : t('settings.system_default')} />
+                  <InfoRow
+                    label={t('settings.dns_status')}
+                    value={currentStatus.isCustom ? t('common.custom') : t('settings.system_default')}
+                  />
                   {currentStatus.latency !== undefined && (
-                    <InfoRow label={t('status.latency')} value={t('status.latency_ms', { latency: Math.round(currentStatus.latency) })} />
+                    <InfoRow
+                      label={t('status.latency')}
+                      value={t('status.latency_ms', { latency: Math.round(currentStatus.latency) })}
+                    />
                   )}
                 </SettingsGroup>
               </section>
@@ -330,11 +340,17 @@ export function Settings({ onSave }: SettingsProps) {
                 {t('settings.chrome')}
               </h3>
               <SettingsGroup>
-                <InfoRow label={t('settings.dns_status')} value={chromeInstalled ? t('settings.chrome_installed') : t('settings.chrome_not_installed')} />
+                <InfoRow
+                  label={t('settings.dns_status')}
+                  value={chromeInstalled ? t('settings.chrome_installed') : t('settings.chrome_not_installed')}
+                />
                 {chromeInstalled && chromeVersion && (
                   <InfoRow label={t('settings.chrome_version')} value={chromeVersion} />
                 )}
-                <InfoRow label={t('settings.chrome_doh')} value={currentStatus?.chromeDohUrl ? t('common.enabled') : t('common.disabled')} />
+                <InfoRow
+                  label={t('settings.chrome_doh')}
+                  value={currentStatus?.chromeDohUrl ? t('common.enabled') : t('common.disabled')}
+                />
                 {currentStatus?.chromeDohUrl && (
                   <InfoRow label={t('settings.chrome_doh_url')} value={currentStatus.chromeDohUrl} />
                 )}
@@ -367,7 +383,9 @@ export function Settings({ onSave }: SettingsProps) {
                       className="flex items-center justify-between px-4 py-2 cursor-default hover:bg-bg-card transition-colors duration-150"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`} />
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${svc.isActive ? 'bg-success' : 'bg-text-muted'}`}
+                        />
                         <span className="text-xs text-text-primary">{svc.displayName}</span>
                       </div>
                       {svc.dnsServers.length > 0 && (

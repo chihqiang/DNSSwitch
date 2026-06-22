@@ -24,6 +24,8 @@ interface DnsState {
   isSwitching: boolean;
   /** 当前正在切换的服务器 ID，用于 per-server 加载状态 */
   switchingServerId: string | null;
+  /** 当前正在切换 Chrome DoH 的服务器 ID */
+  chromeSwitchingServerId: string | null;
   /** 当前正在测试延迟的服务器 ID，用于 per-server 加载状态 */
   testingServerId: string | null;
   /** 错误信息 */
@@ -44,6 +46,7 @@ interface DnsState {
   setIsTesting: (v: boolean) => void;
   setIsSwitching: (v: boolean) => void;
   setSwitchingServerId: (id: string | null) => void;
+  setChromeSwitchingServerId: (id: string | null) => void;
   setTestingServerId: (id: string | null) => void;
   setError: (error: string | null) => void;
 }
@@ -57,6 +60,7 @@ export const useDnsStore = create<DnsState>((set) => ({
   isTesting: false,
   isSwitching: false,
   switchingServerId: null,
+  chromeSwitchingServerId: null,
   testingServerId: null,
   error: null,
 
@@ -137,6 +141,7 @@ export const useDnsStore = create<DnsState>((set) => ({
   setIsTesting: (v) => set({ isTesting: v }),
   setIsSwitching: (v) => set({ isSwitching: v }),
   setSwitchingServerId: (id) => set({ switchingServerId: id }),
+  setChromeSwitchingServerId: (id) => set({ chromeSwitchingServerId: id }),
   setTestingServerId: (id) => set({ testingServerId: id }),
   setError: (error) => set({ error }),
 }));
