@@ -102,7 +102,7 @@ export const DnsServerCard = memo(function DnsServerCard({
             disabled={isSwitching}
             isLoading={isThisSwitching}
           >
-            {server.isActive ? t('common.active_dns') : t('common.switch')}
+            {server.isActive ? t('common.active_dns') : 'DNS'}
           </Button>
         )}
         {server.dohUrl && chromeInstalled && (
@@ -118,11 +118,7 @@ export const DnsServerCard = memo(function DnsServerCard({
             }
             onClick={() => onSwitchChromeDoh(server.id)}
           >
-            {isThisChromeSwitching
-              ? t('common.switching')
-              : chromeDohActive
-                ? t('common.chrome_doh_active')
-                : t('common.chrome_doh')}
+            {isThisChromeSwitching ? t('common.switching') : chromeDohActive ? t('common.chrome_doh_active') : 'Chrome'}
           </Button>
         )}
         {!server.isActive && server.addresses.length === 0 && !server.dohUrl && (

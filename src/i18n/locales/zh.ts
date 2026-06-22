@@ -70,7 +70,7 @@ export default {
   server: {
     title: 'DNS 服务器',
     refresh_latency: '刷新延迟',
-    reset_system: '恢复默认 DNS',
+    reset_system: '重置 DNS',
     add_server: '添加服务器',
     add_title: '添加 DNS 服务器',
     edit_title: '编辑 DNS 服务器',
@@ -95,8 +95,14 @@ export default {
     no_ip_hint: '未配置 IP 地址和 DoH URL',
     no_ip_form_hint: '没有 IP 地址的服务器将通过 Chrome DNS-over-HTTPS 切换。如果未安装 Chrome，则只能用于查询。',
     no_dns_config: '无可用 DNS 配置',
+    doh_label: 'DoH URL',
+    doh_placeholder: 'https://dns.example.com/dns-query',
+    dot_label: 'DoT 地址',
+    dot_placeholder: '1.1.1.1',
     doh_hint: '可选 DNS-over-HTTPS 端点 URL',
     dot_hint: '可选 DNS-over-TLS 服务器地址 (端口 853)',
+    reachable: '可达',
+    unreachable: '不可达',
   },
   dns_provider: {
     system: '系统默认',

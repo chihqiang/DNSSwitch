@@ -41,9 +41,8 @@ pub fn switch_dns(
     server_id: String,
     server_name: String,
     addresses: Vec<String>,
-    doh_url: Option<String>,
 ) -> Result<(), String> {
-    switch_dns_inner(&app_handle, server_id, server_name, addresses, doh_url)
+    switch_dns_inner(&app_handle, server_id, server_name, addresses)
 }
 
 /// DNS 切换内部实现（供托盘菜单等内部调用）
@@ -53,7 +52,6 @@ pub fn switch_dns_inner(
     server_id: String,
     server_name: String,
     addresses: Vec<String>,
-    _doh_url: Option<String>,
 ) -> Result<(), String> {
     let addrs: Vec<&str> = addresses.iter().map(|a| a.trim()).filter(|a| !a.is_empty()).collect();
 
@@ -129,7 +127,6 @@ pub fn reset_system_dns(app_handle: tauri::AppHandle) -> Result<(), String> {
 
 /// 重置 DNS 为系统默认（内部实现，供托盘菜单调用）
 pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), String> {
-    // 同时清除系统 DNS 和 Chrome DoH
     let mut success = true;
     let mut error_msg = String::new();
 
@@ -143,15 +140,10 @@ pub fn reset_system_dns_inner(app_handle: &tauri::AppHandle) -> Result<(), Strin
         error_msg = e.message;
     }
 
-    if let Err(e) = crate::dns::chrome_dns::reset_chrome_doh() {
-        log::error!("[dns] Failed to reset Chrome DoH: {}", e.message);
-    }
-
     if success {
         log::info!("[dns] Reset to default DNS");
         if let Ok(mut config) = crate::config::load_config() {
             config.active_server_id = None;
-            config.active_chrome_server_id = None;
             let _ = crate::config::save_config(&config);
         }
         let _ = history::add_event(DnsEvent {
@@ -360,42 +352,4 @@ pub fn test_dot_connectivity(dot_address: String) -> Result<f64, String> {
         .map_err(|e| e.message)
 }
 
-/// 获取 Chrome 当前的 DoH 设置
-#[tauri::command(rename_all = "camelCase")]
-pub fn get_chrome_doh_status() -> Result<Option<String>, String> {
-    crate::dns::chrome_dns::get_chrome_doh().map_err(|e| e.message)
-}
 
-/// 手动设置 Chrome DoH 策略
-#[tauri::command(rename_all = "camelCase")]
-pub fn set_chrome_doh(doh_url: String, server_id: String) -> Result<(), String> {
-    crate::dns::chrome_dns::set_chrome_doh(&doh_url).map_err(|e| e.message)?;
-    if let Ok(mut config) = crate::config::load_config() {
-        config.active_chrome_server_id = Some(server_id);
-        let _ = crate::config::save_config(&config);
-    }
-    Ok(())
-}
-
-/// 清除 Chrome DoH 策略
-#[tauri::command(rename_all = "camelCase")]
-pub fn reset_chrome_doh() -> Result<(), String> {
-    crate::dns::chrome_dns::reset_chrome_doh().map_err(|e| e.message)?;
-    if let Ok(mut config) = crate::config::load_config() {
-        config.active_chrome_server_id = None;
-        let _ = crate::config::save_config(&config);
-    }
-    Ok(())
-}
-
-/// 检查 Chrome 是否已安装
-#[tauri::command(rename_all = "camelCase")]
-pub fn is_chrome_installed() -> bool {
-    crate::dns::chrome_dns::is_chrome_installed()
-}
-
-/// 获取 Chrome 版本号
-#[tauri::command(rename_all = "camelCase")]
-pub fn get_chrome_version() -> Option<String> {
-    crate::dns::chrome_dns::get_chrome_version()
-}

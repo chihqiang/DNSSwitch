@@ -58,17 +58,6 @@ export function useDnsServers() {
         useDnsStore.getState().setActiveServer(currentConfig.activeServerId);
       }
 
-      // 恢复 Chrome DoH 状态
-      if (currentConfig.activeChromeServerId) {
-        const chromeServer = dnsServers.find((s) => s.id === currentConfig.activeChromeServerId);
-        if (chromeServer?.dohUrl) {
-          const status = useDnsStore.getState().currentStatus;
-          if (status) {
-            useDnsStore.getState().setCurrentStatus({ ...status, chromeDohUrl: chromeServer.dohUrl });
-          }
-        }
-      }
-
       // 同步到 config.servers 以保持向后兼容
       if (currentConfig.servers.length === 0) {
         useConfigStore.getState().setConfig({ ...currentConfig, servers: dnsServers });
@@ -97,12 +86,19 @@ export function useDnsServers() {
   const deleteServer = useCallback(async (id: string) => {
     useDnsStore.getState().removeServer(id);
     const { config } = useConfigStore.getState();
-    useConfigStore.getState().setConfig({
+    const updatedConfig = {
       ...config,
       servers: config.servers.filter((s) => s.id !== id),
-    });
+    };
+    if (config.activeChromeServerId === id) {
+      updatedConfig.activeChromeServerId = undefined;
+    }
+    useConfigStore.getState().setConfig(updatedConfig);
     try {
       await invoke('delete_server_from_registry', { id });
+      if (config.activeChromeServerId === id) {
+        await invoke('reset_chrome_doh');
+      }
     } catch (e) {
       logger.error(`Failed to delete server from registry: ${e}`);
     }
@@ -151,9 +147,7 @@ export function useDnsServers() {
       await invoke('reset_system_dns');
       useDnsStore.getState().clearActive();
       const { config: currentConfig } = useConfigStore.getState();
-      useConfigStore
-        .getState()
-        .setConfig({ ...currentConfig, activeServerId: undefined, activeChromeServerId: undefined });
+      useConfigStore.getState().setConfig({ ...currentConfig, activeServerId: undefined });
       logger.info('System DNS reset to default');
     } catch (e) {
       logger.error(`Failed to reset system DNS: ${e}`);

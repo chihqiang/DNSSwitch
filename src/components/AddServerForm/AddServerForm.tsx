@@ -180,26 +180,26 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
 
       {/* DoH URL */}
       <div className="flex flex-col gap-1">
-        <label className={LABEL_CLASS}>DoH URL</label>
+        <label className={LABEL_CLASS}>{t('server.doh_label')}</label>
         <input
           className={inputClass()}
           type="text"
           value={dohUrl}
           onChange={(e) => setDohUrl(e.target.value)}
-          placeholder="https://dns.example.com/dns-query"
+          placeholder={t('server.doh_placeholder')}
         />
         <span className="text-xs text-text-muted">{t('server.doh_hint')}</span>
       </div>
 
       {/* DoT 地址 */}
       <div className="flex flex-col gap-1">
-        <label className={LABEL_CLASS}>DoT Address</label>
+        <label className={LABEL_CLASS}>{t('server.dot_label')}</label>
         <input
           className={inputClass()}
           type="text"
           value={dotAddress}
           onChange={(e) => setDotAddress(e.target.value)}
-          placeholder="1.1.1.1"
+          placeholder={t('server.dot_placeholder')}
         />
         <span className="text-xs text-text-muted">{t('server.dot_hint')}</span>
       </div>
@@ -216,7 +216,9 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         <div
           className={`px-3 py-2 rounded text-xs ${testResult.success ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}
         >
-          {testResult.success ? `Reachable - ${Math.round(testResult.latencyMs)}ms` : testResult.error || 'Unreachable'}
+          {testResult.success
+            ? `${t('server.reachable')} - ${Math.round(testResult.latencyMs)}ms`
+            : testResult.error || t('server.unreachable')}
         </div>
       )}
 
@@ -233,7 +235,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
           isLoading={isTesting}
           disabled={!primaryAddr.trim() || !isValidIp(primaryAddr.trim()) || isSubmitting}
         >
-          Test
+          {t('common.test')}
         </Button>
         <Button type="submit" variant={ButtonVariant.PRIMARY} isLoading={isSubmitting}>
           {isEditing ? t('common.save') : t('common.add')}

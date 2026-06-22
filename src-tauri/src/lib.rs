@@ -143,11 +143,11 @@ pub fn run() {
             dns::provider::update_server_in_registry,
             dns::provider::delete_server_from_registry,
             dns::provider::reset_provider_registry,
-            commands::dns::get_chrome_doh_status,
-            commands::dns::set_chrome_doh,
-            commands::dns::reset_chrome_doh,
-            commands::dns::is_chrome_installed,
-            commands::dns::get_chrome_version,
+            commands::chrome::get_chrome_doh_status,
+            commands::chrome::set_chrome_doh,
+            commands::chrome::reset_chrome_doh,
+            commands::chrome::is_chrome_installed,
+            commands::chrome::get_chrome_version,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -218,7 +218,6 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent
                         server.id.clone(),
                         server.name.clone(),
                         server.addresses.clone(),
-                        server.doh_url.clone(),
                     ) {
                         log::error!("[tray] Failed to switch DNS: {}", e);
                     }

@@ -4,5 +4,6 @@
 // ============================================================
 
 pub mod dns;
+pub mod chrome;
 pub mod config;
 pub mod system;

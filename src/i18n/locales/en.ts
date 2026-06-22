@@ -70,7 +70,7 @@ export default {
   server: {
     title: 'DNS Servers',
     refresh_latency: 'Refresh Latency',
-    reset_system: 'Reset Default DNS',
+    reset_system: 'Reset DNS',
     add_server: 'Add Server',
     add_title: 'Add DNS Server',
     edit_title: 'Edit DNS Server',
@@ -96,8 +96,14 @@ export default {
     no_ip_form_hint:
       'Servers without IP addresses will use Chrome DNS-over-HTTPS. If Chrome is not installed, only queries will work.',
     no_dns_config: 'No DNS configuration available',
+    doh_label: 'DoH URL',
+    doh_placeholder: 'https://dns.example.com/dns-query',
+    dot_label: 'DoT Address',
+    dot_placeholder: '1.1.1.1',
     doh_hint: 'Optional DNS-over-HTTPS endpoint URL',
     dot_hint: 'Optional DNS-over-TLS server address (port 853)',
+    reachable: 'Reachable',
+    unreachable: 'Unreachable',
   },
   dns_provider: {
     system: 'System Default',
