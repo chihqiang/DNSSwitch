@@ -72,12 +72,14 @@ export function LogPage() {
   }, [limit, loadLog]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const isLoadingRef = useRef(isLoading);
+  isLoadingRef.current = isLoading;
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoading) {
+        if (entries[0].isIntersecting && !isLoadingRef.current) {
           setLimit((prev) => prev + LOAD_MORE_STEP);
         }
       },
@@ -85,7 +87,7 @@ export function LogPage() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isLoading]);
+  }, []);
 
   const levelBadgeVariant = (level: string): BadgeVariant => {
     switch (level) {
@@ -176,9 +178,9 @@ export function LogPage() {
         {logLines.length > 0 && (
           <div className="flex flex-col bg-bg-secondary rounded-lg overflow-hidden">
             <div ref={scrollRef} className="max-h-[500px] overflow-y-auto">
-              {logLines.map((line, i) => (
+              {logLines.map((line) => (
                 <div
-                  key={i}
+                  key={line.raw}
                   className="px-3 py-1.5 font-mono text-[11px] leading-relaxed border-b border-border/20 hover:bg-bg-card transition-colors flex items-start gap-2"
                 >
                   <Badge variant={levelBadgeVariant(line.level)}>

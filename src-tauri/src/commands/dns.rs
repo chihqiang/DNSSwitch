@@ -11,7 +11,6 @@ use crate::dns::dot;
 use crate::dns::history;
 use crate::dns::history::DnsEvent;
 use crate::dns::query;
-use crate::dns::resolver;
 use crate::dns::system_dns;
 use crate::dns::types::{DnsLatencyResult, DnsLeakResult, DnsStatus};
 
@@ -63,14 +62,14 @@ pub fn switch_dns_inner(
         Ok(()) => {
             log::info!("[dns] Switched system DNS to {} ({})", server_name, addresses.join(", "));
             if let Ok(mut config) = crate::config::load_config() {
-                config.active_server_id = Some(server_id.clone());
+                config.active_server_id = Some(server_id);
                 let _ = crate::config::save_config(&config);
             }
             let hist_name = server_name.clone();
             let hist_addrs = addresses.clone();
             let addr = addresses.first().cloned();
             std::thread::spawn(move || {
-                let latency = addr.and_then(|a| resolver::measure_latency(&a).ok());
+                let latency = addr.and_then(|a| query::measure_latency(&a).ok());
                 let _ = history::add_event(DnsEvent {
                     id: new_id(),
                     event_type: "switch".to_string(),
@@ -195,27 +194,27 @@ pub fn record_event(event_type: String, server_name: String, addresses: Vec<Stri
 pub fn check_dns_leak(expected_addresses: Vec<String>) -> Result<DnsLeakResult, String> {
     let actual = system_dns::get_current_dns_status().map_err(|e| e.message)?;
 
-    let mut actual_sorted: Vec<String> = actual.current_servers.clone();
-    actual_sorted.sort();
-    let mut expected_sorted = expected_addresses.clone();
+    let mut actual_servers = actual.current_servers;
+    actual_servers.sort();
+    let mut expected_sorted = expected_addresses;
     expected_sorted.sort();
 
-    let matched = actual_sorted == expected_sorted && !actual_sorted.is_empty();
+    let matched = actual_servers == expected_sorted && !actual_servers.is_empty();
 
     let detail = if !matched {
-        log::warn!("[dns] DNS leak detected: expected={}, actual={}", expected_sorted.join(", "), if actual_sorted.is_empty() { "system default (DHCP)".to_string() } else { actual_sorted.join(", ") });
+        log::warn!("[dns] DNS leak detected: expected={}, actual={}", expected_sorted.join(", "), if actual_servers.is_empty() { "system default (DHCP)".to_string() } else { actual_servers.join(", ") });
         format!(
             "Leak detected! System is using: {}. Expected: {}",
-            if actual_sorted.is_empty() { "system default (DHCP)".to_string() } else { actual_sorted.join(", ") },
+            if actual_servers.is_empty() { "system default (DHCP)".to_string() } else { actual_servers.join(", ") },
             expected_sorted.join(", ")
         )
     } else {
-        format!("OK - system using {}", actual_sorted.join(", "))
+        format!("OK - system using {}", actual_servers.join(", "))
     };
 
     Ok(DnsLeakResult {
-        expected_servers: expected_addresses,
-        actual_servers: actual.current_servers,
+        expected_servers: expected_sorted,
+        actual_servers,
         leak_detected: !matched,
         is_reachable: true,
         latency_ms: None,
@@ -246,7 +245,7 @@ pub fn resolve_dns(domain: String, record_type: String, address: String) -> Resu
 /// 测试指定 DNS 服务器的延迟
 #[tauri::command(rename_all = "camelCase")]
 pub fn test_dns_latency(server_id: String, address: String) -> Result<DnsLatencyResult, String> {
-    match resolver::measure_latency(&address) {
+    match query::measure_latency(&address) {
         Ok(latency_ms) => {
             log::debug!("[dns] Latency test {}: {:.2}ms", address, latency_ms);
             Ok(DnsLatencyResult {
@@ -281,7 +280,7 @@ pub fn test_all_dns_latency(servers: Vec<DnsLatencyInput>) -> Result<Vec<DnsLate
     std::thread::scope(|s| {
         for input in &servers {
             s.spawn(|| {
-                let result = match resolver::measure_latency(&input.address) {
+                let result = match query::measure_latency(&input.address) {
                     Ok(latency_ms) => {
                         log::debug!("[dns] Latency test {}: {:.2}ms", input.address, latency_ms);
                         DnsLatencyResult {

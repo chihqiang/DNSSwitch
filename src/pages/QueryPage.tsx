@@ -150,7 +150,7 @@ export function QueryPage() {
                 className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent w-full"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleQuery()}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleQuery(); }}
                 placeholder={t('query.domain_placeholder')}
               />
             </div>

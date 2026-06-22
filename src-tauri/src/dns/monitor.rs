@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use tauri::Emitter;
 
-use super::resolver::measure_latency;
+use super::query::measure_latency;
 use super::system_dns::get_current_dns_status;
 use crate::config;
 

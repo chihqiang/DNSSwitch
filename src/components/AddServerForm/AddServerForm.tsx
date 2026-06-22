@@ -118,7 +118,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         },
         isActive: editingServer?.isActive ?? false,
         isSystem: editingServer?.isSystem ?? false,
-        tags: [],
+        tags: editingServer?.tags ?? [],
         dohUrl: dohUrl.trim() || undefined,
         dotAddress: dotAddress.trim() || undefined,
         createdAt: editingServer?.createdAt ?? now,

@@ -108,7 +108,12 @@ export function useDnsServers() {
   const editServer = useCallback(async (id: string, updates: Partial<DnsServer>) => {
     useDnsStore.getState().updateServer(id, updates);
     const { config } = useConfigStore.getState();
-    const updated = { ...config.servers.find((s) => s.id === id)!, ...updates };
+    const existing = config.servers.find((s) => s.id === id);
+    if (!existing) {
+      logger.error(`editServer: server not found: ${id}`);
+      return;
+    }
+    const updated = { ...existing, ...updates };
     useConfigStore.getState().setConfig({
       ...config,
       servers: config.servers.map((s) => (s.id === id ? updated : s)),

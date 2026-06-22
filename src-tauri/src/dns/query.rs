@@ -307,6 +307,12 @@ pub fn parse_response(data: &[u8], expected_type: RecordType) -> Result<Vec<Stri
     Ok(answers)
 }
 
+/// 测量 DNS 服务器延迟（通过解析 "one.one.one.one" 的往返时间）
+pub fn measure_latency(dns_server: &str) -> Result<f64, AppError> {
+    let result = resolve("one.one.one.one", "A", dns_server)?;
+    Ok(result.latency_ms)
+}
+
 /// 跳跃 DNS 名称（处理普通标签和指针压缩），返回名称后的偏移量
 fn skip_name(data: &[u8], offset: usize) -> Result<usize, AppError> {
     let mut pos = offset;

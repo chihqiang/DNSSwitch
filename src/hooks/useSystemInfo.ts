@@ -36,9 +36,12 @@ export function useSystemInfo() {
     }
   }, []);
 
-  // 挂载时并行获取系统信息和网络服务
   useEffect(() => {
-    Promise.all([fetchSystemInfo(), fetchNetworkServices()]).finally(() => setLoading(false));
+    let mounted = true;
+    Promise.all([fetchSystemInfo(), fetchNetworkServices()]).finally(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
   }, [fetchSystemInfo, fetchNetworkServices]);
 
   return { systemInfo, networkServices, loading, error };
