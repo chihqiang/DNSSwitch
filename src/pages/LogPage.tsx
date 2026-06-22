@@ -151,13 +151,13 @@ export function LogPage() {
                     <span className="font-medium text-text-primary truncate">{entry.domain}</span>
                     <span className="text-text-muted shrink-0">{entry.recordType}</span>
                   </div>
-                  <span className="text-text-muted/60 shrink-0">
-                    {new Date(entry.timestamp).toLocaleString()}
-                  </span>
+                  <span className="text-text-muted/60 shrink-0">{new Date(entry.timestamp).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center gap-3 text-text-muted/70 mt-1">
                   <span className="text-text-muted/50">{entry.protocol.toUpperCase()}</span>
-                  <span className="text-text-muted/50" aria-hidden="true">→</span>
+                  <span className="text-text-muted/50" aria-hidden="true">
+                    →
+                  </span>
                   <span className="truncate">{entry.server}</span>
                   {entry.latencyMs > 0 && (
                     <span>{t('status.latency_ms', { latency: Math.round(entry.latencyMs) })}</span>
@@ -186,13 +186,9 @@ export function LogPage() {
                   key={line.raw}
                   className="px-3 py-1.5 font-mono text-[11px] leading-relaxed border-b border-border/20 hover:bg-bg-card transition-colors flex items-start gap-2"
                 >
-                  <Badge variant={levelBadgeVariant(line.level)}>
-                    {line.level}
-                  </Badge>
+                  <Badge variant={levelBadgeVariant(line.level)}>{line.level}</Badge>
                   <span className="text-text-muted/50 shrink-0">{line.timestamp}</span>
-                  {line.tag && (
-                    <span className="text-text-muted/70 shrink-0">[{line.tag}]</span>
-                  )}
+                  {line.tag && <span className="text-text-muted/70 shrink-0">[{line.tag}]</span>}
                   <span className="text-text-primary break-all">{line.message}</span>
                 </div>
               ))}

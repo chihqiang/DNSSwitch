@@ -139,6 +139,7 @@ export function useDnsServers() {
       .filter((s) => s.addresses.length > 0)
       .map((s) => ({ serverId: s.id, address: s.addresses[0] }));
     if (inputs.length === 0) return;
+    useDnsStore.getState().setIsTesting(true);
     try {
       const results = await invoke<DnsLatencyTest[]>('test_all_dns_latency', { servers: inputs });
       const { updateServer, addLatencyTest } = useDnsStore.getState();
@@ -148,9 +149,8 @@ export function useDnsServers() {
         }
         addLatencyTest(r);
       }
-    } catch (e) {
-      logger.error(`Failed to refresh latency: ${e}`);
-      useToastStore.getState().addToast('error', String(e));
+    } finally {
+      useDnsStore.getState().setIsTesting(false);
     }
   }, []);
 

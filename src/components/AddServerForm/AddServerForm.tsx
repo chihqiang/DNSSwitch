@@ -94,7 +94,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
     } finally {
       setIsTesting(false);
     }
-  }, [primaryAddr]);
+  }, [primaryAddr, t]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -133,7 +133,7 @@ export function AddServerForm({ editingServer, onSubmit, onCancel }: AddServerFo
         setIsSubmitting(false);
       }
     },
-    [editingServer, isEditing, name, primaryAddr, secondaryAddr, dohUrl, dotAddress, onSubmit, validate],
+    [editingServer, isEditing, name, primaryAddr, secondaryAddr, dohUrl, dotAddress, onSubmit, validate, t],
   );
 
   return (

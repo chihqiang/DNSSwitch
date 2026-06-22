@@ -41,7 +41,9 @@ export function useSystemInfo() {
     Promise.all([fetchSystemInfo(), fetchNetworkServices()]).finally(() => {
       if (mounted) setLoading(false);
     });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [fetchSystemInfo, fetchNetworkServices]);
 
   return { systemInfo, networkServices, loading, error };

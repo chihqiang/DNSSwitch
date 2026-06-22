@@ -10,6 +10,7 @@ import { logger } from '@/lib/log';
 import { Layout } from '@/components/Layout/Layout';
 import { StatusBar } from '@/components/StatusBar';
 import { ErrorBoundary, LoadingSpinner, ToastContainer } from '@/components/common';
+import { useNProgress } from '@/hooks/useNProgress';
 import { useConfig } from '@/hooks';
 import { useConfigStore, useDnsStore } from '@/stores';
 import { ThemeMode } from '@/types';
@@ -21,6 +22,7 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ de
 const LogPage = lazy(() => import('@/pages/LogPage').then((m) => ({ default: m.LogPage })));
 
 function AppContent() {
+  useNProgress();
   const { loadConfig } = useConfig();
   const setHealthStatus = useDnsStore((s) => s.setHealthStatus);
   const themeMode = useConfigStore((s) => s.config.theme.mode);

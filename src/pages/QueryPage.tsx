@@ -150,7 +150,9 @@ export function QueryPage() {
                 className="px-2.5 py-1.5 text-sm bg-bg-card border-0 rounded focus:outline-none focus:ring-2 focus:ring-accent w-full"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') void handleQuery(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleQuery();
+                }}
                 placeholder={t('query.domain_placeholder')}
               />
             </div>
@@ -261,7 +263,9 @@ export function QueryPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="text-text-muted">{t('query.latency')}:</span>
-                <span className="text-text-primary font-medium">{t('status.latency_ms', { latency: Math.round(result.latencyMs) })}</span>
+                <span className="text-text-primary font-medium">
+                  {t('status.latency_ms', { latency: Math.round(result.latencyMs) })}
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="text-text-muted">{t('query.record_type')}:</span>
