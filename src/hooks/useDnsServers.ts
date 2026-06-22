@@ -6,7 +6,9 @@ import { useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '@/lib/log';
 import { useDnsStore, useConfigStore } from '@/stores';
+import { useToastStore } from '@/stores/toastStore';
 import type { DnsServer, DnsLatencyTest, ProviderRegistry, ServerDef } from '@/types';
+import i18n from '@/i18n';
 
 /** 将 Rust ServerDef 转为前端 DnsServer（补充运行时字段） */
 function serverDefToDnsServer(def: ServerDef, providers: ProviderRegistry['providers']): DnsServer {
@@ -79,6 +81,7 @@ export function useDnsServers() {
       await invoke('add_server_to_registry', { server: dnsServerToServerDef(server) });
     } catch (e) {
       logger.error(`Failed to persist new server: ${e}`);
+      useToastStore.getState().addToast('error', `${i18n.t('settings.import_failed')}: ${e}`);
     }
   }, []);
 
@@ -101,6 +104,8 @@ export function useDnsServers() {
       }
     } catch (e) {
       logger.error(`Failed to delete server from registry: ${e}`);
+      useToastStore.getState().addToast('error', String(e));
+      throw e;
     }
   }, []);
 
@@ -122,6 +127,8 @@ export function useDnsServers() {
       await invoke('update_server_in_registry', { id, updates: dnsServerToServerDef(updated) });
     } catch (e) {
       logger.error(`Failed to update server in registry: ${e}`);
+      useToastStore.getState().addToast('error', String(e));
+      throw e;
     }
   }, []);
 
@@ -143,6 +150,7 @@ export function useDnsServers() {
       }
     } catch (e) {
       logger.error(`Failed to refresh latency: ${e}`);
+      useToastStore.getState().addToast('error', String(e));
     }
   }, []);
 
@@ -154,8 +162,11 @@ export function useDnsServers() {
       const { config: currentConfig } = useConfigStore.getState();
       useConfigStore.getState().setConfig({ ...currentConfig, activeServerId: undefined });
       logger.info('System DNS reset to default');
+      useToastStore.getState().addToast('success', i18n.t('status.reset_success'));
     } catch (e) {
       logger.error(`Failed to reset system DNS: ${e}`);
+      useToastStore.getState().addToast('error', String(e));
+      throw e;
     }
   }, []);
 

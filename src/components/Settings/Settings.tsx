@@ -157,15 +157,18 @@ export function Settings({ onSave }: SettingsProps) {
                 className="w-4 h-4 accent-accent rounded shrink-0"
                 checked={settings.autoStart}
                 onChange={async (e) => {
-                  useConfigStore.getState().updateSettings({ autoStart: e.target.checked });
+                  const checked = e.target.checked;
+                  useConfigStore.getState().updateSettings({ autoStart: checked });
                   try {
-                    if (e.target.checked) {
+                    if (checked) {
                       await enableAutostart();
                     } else {
                       await disableAutostart();
                     }
                   } catch (err) {
+                    useConfigStore.getState().updateSettings({ autoStart: !checked });
                     logger.error(`Failed to toggle autostart: ${err}`);
+                    useToastStore.getState().addToast('error', String(err));
                   }
                 }}
               />

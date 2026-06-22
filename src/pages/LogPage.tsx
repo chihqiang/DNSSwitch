@@ -11,6 +11,7 @@ import {
   ErrorBoundary,
 } from '@/components/common';
 import { useRequestLogStore } from '@/stores';
+import { useToastStore } from '@/stores/toastStore';
 
 const DEFAULT_LIMIT = 20;
 const LOAD_MORE_STEP = 50;
@@ -30,6 +31,8 @@ export function LogPage() {
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isClearingToday, setIsClearingToday] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [showClearTodayConfirm, setShowClearTodayConfirm] = useState(false);
 
@@ -204,11 +207,20 @@ export function LogPage() {
           title={t('common.confirm_clear_log')}
           message={t('log.clear_today_desc')}
           confirmLabel={t('log.clear')}
+          isLoading={isClearingToday}
           onConfirm={async () => {
-            setShowClearTodayConfirm(false);
-            await invoke('clear_log_file');
-            setLogLines([]);
-            setLimit(DEFAULT_LIMIT);
+            setIsClearingToday(true);
+            try {
+              await invoke('clear_log_file');
+              setLogLines([]);
+              setLimit(DEFAULT_LIMIT);
+              useToastStore.getState().addToast('success', t('log.clear_success'));
+            } catch (e) {
+              useToastStore.getState().addToast('error', String(e));
+            } finally {
+              setIsClearingToday(false);
+              setShowClearTodayConfirm(false);
+            }
           }}
           variant="danger"
         />
@@ -219,11 +231,20 @@ export function LogPage() {
           title={t('common.confirm_clear_log')}
           message={t('log.clear_all_desc')}
           confirmLabel={t('log.clear_all')}
+          isLoading={isClearingAll}
           onConfirm={async () => {
-            setShowClearAllConfirm(false);
-            await invoke('clear_all_logs');
-            setLogLines([]);
-            setLimit(DEFAULT_LIMIT);
+            setIsClearingAll(true);
+            try {
+              await invoke('clear_all_logs');
+              setLogLines([]);
+              setLimit(DEFAULT_LIMIT);
+              useToastStore.getState().addToast('success', t('log.clear_all_success'));
+            } catch (e) {
+              useToastStore.getState().addToast('error', String(e));
+            } finally {
+              setIsClearingAll(false);
+              setShowClearAllConfirm(false);
+            }
           }}
           variant="danger"
         />

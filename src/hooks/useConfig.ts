@@ -7,7 +7,9 @@ import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '@/lib/log';
 import { useConfigStore } from '@/stores';
+import { useToastStore } from '@/stores/toastStore';
 import type { AppConfig } from '@/types';
+import i18n from '@/i18n';
 
 export function useConfig() {
   const config = useConfigStore((s) => s.config);
@@ -38,9 +40,11 @@ export function useConfig() {
     try {
       await invoke('save_config', { config: current });
       useConfigStore.getState().setError(null);
+      useToastStore.getState().addToast('success', i18n.t('settings.save_success'));
     } catch (e) {
       logger.error(`Failed to save configuration: ${e}`);
       useConfigStore.getState().setError(String(e));
+      useToastStore.getState().addToast('error', String(e));
     } finally {
       useConfigStore.getState().setIsSaving(false);
     }

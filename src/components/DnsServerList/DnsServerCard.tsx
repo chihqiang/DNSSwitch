@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { memo, useState, useRef, useEffect } from 'react';
 import type { DnsServer } from '@/types';
-import { Badge, Button, ButtonVariant, BadgeVariant } from '@/components/common';
+import { Badge, Button, ButtonVariant, BadgeVariant, LoadingSpinner } from '@/components/common';
 import { getLatencyBadgeVariant } from '@/constants';
 
 interface DnsServerCardProps {
@@ -14,6 +14,7 @@ interface DnsServerCardProps {
   isSwitching: boolean;
   switchingServerId: string | null;
   chromeSwitchingServerId: string | null;
+  testingServerId?: string | null;
   chromeDohActive?: boolean;
   chromeInstalled?: boolean;
 }
@@ -28,6 +29,7 @@ export const DnsServerCard = memo(function DnsServerCard({
   isSwitching,
   switchingServerId,
   chromeSwitchingServerId,
+  testingServerId,
   chromeDohActive,
   chromeInstalled,
 }: DnsServerCardProps) {
@@ -35,6 +37,7 @@ export const DnsServerCard = memo(function DnsServerCard({
   const latency = server.latency;
   const isThisSwitching = isSwitching && switchingServerId === server.id;
   const isThisChromeSwitching = chromeSwitchingServerId === server.id;
+  const isThisTesting = testingServerId === server.id;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -137,12 +140,14 @@ export const DnsServerCard = memo(function DnsServerCard({
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 min-w-[120px] bg-bg-card border border-border rounded-md shadow-lg py-1 z-10 animate-fadeIn">
               <button
-                className="w-full text-left px-3 py-1.5 text-sm text-text-primary hover:bg-border/30 transition-colors"
+                className="w-full text-left px-3 py-1.5 text-sm text-text-primary hover:bg-border/30 transition-colors flex items-center gap-2"
                 onClick={() => {
                   onTest(server.id);
                   setMenuOpen(false);
                 }}
+                disabled={isThisTesting}
               >
+                {isThisTesting && <LoadingSpinner size={12} />}
                 {t('common.test')}
               </button>
               <button

@@ -20,6 +20,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
     currentStatus,
     isSwitching,
     switchingServerId,
+    testingServerId,
     switchDns,
     switchChromeDoh,
     testLatency,
@@ -30,6 +31,8 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
   const configLoaded = useConfigStore((s) => s.isLoaded);
   const activeChromeServerId = useConfigStore((s) => s.config.activeChromeServerId);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isChromeResetting, setIsChromeResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showChromeResetConfirm, setShowChromeResetConfirm] = useState(false);
   const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
@@ -43,16 +46,30 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
     setPendingChromeSwitchId(id);
   }, []);
 
+  const [isSwitchConfirming, setIsSwitchConfirming] = useState(false);
   const handleConfirmSwitch = useCallback(async () => {
     const id = pendingSwitchId;
     setPendingSwitchId(null);
-    if (id) await switchDns(id);
+    if (!id) return;
+    setIsSwitchConfirming(true);
+    try {
+      await switchDns(id);
+    } finally {
+      setIsSwitchConfirming(false);
+    }
   }, [pendingSwitchId, switchDns]);
 
+  const [isChromeSwitchConfirming, setIsChromeSwitchConfirming] = useState(false);
   const handleConfirmChromeSwitch = useCallback(async () => {
     const id = pendingChromeSwitchId;
     setPendingChromeSwitchId(null);
-    if (id) await switchChromeDoh(id);
+    if (!id) return;
+    setIsChromeSwitchConfirming(true);
+    try {
+      await switchChromeDoh(id);
+    } finally {
+      setIsChromeSwitchConfirming(false);
+    }
   }, [pendingChromeSwitchId, switchChromeDoh]);
 
   const handleTest = useCallback(
@@ -66,20 +83,26 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
     setIsRefreshing(true);
     try {
       await refreshLatency();
+      useToastStore.getState().addToast('success', t('server.refresh_done'));
+    } catch (e) {
+      useToastStore.getState().addToast('error', String(e));
     } finally {
       setIsRefreshing(false);
     }
-  }, [refreshLatency]);
+  }, [refreshLatency, t]);
 
   const handleResetConfirm = useCallback(async () => {
+    setIsResetting(true);
     try {
       await resetToSystem();
     } finally {
+      setIsResetting(false);
       setShowResetConfirm(false);
     }
   }, [resetToSystem]);
 
   const handleChromeReset = useCallback(async () => {
+    setIsChromeResetting(true);
     try {
       await invoke('reset_chrome_doh');
       const { config: currentConfig } = useConfigStore.getState();
@@ -89,6 +112,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
     } catch (e) {
       useToastStore.getState().addToast('error', String(e));
     } finally {
+      setIsChromeResetting(false);
       setShowChromeResetConfirm(false);
     }
   }, [t, fetchStatus]);
@@ -160,6 +184,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
               isSwitching={isSwitching}
               switchingServerId={switchingServerId}
               chromeSwitchingServerId={chromeSwitchingServerId}
+              testingServerId={testingServerId}
               chromeDohActive={!!server.dohUrl && server.id === activeChromeServerId}
               chromeInstalled={chromeInstalled}
             />
@@ -174,6 +199,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         message={t('common.confirm_reset_dns_desc')}
         confirmLabel={t('server.reset_system')}
         onConfirm={handleResetConfirm}
+        isLoading={isResetting}
         variant={ButtonVariant.SECONDARY}
       />
 
@@ -184,6 +210,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         message={t('common.confirm_reset_chrome_desc')}
         confirmLabel={t('server.reset_chrome')}
         onConfirm={handleChromeReset}
+        isLoading={isChromeResetting}
         variant={ButtonVariant.SECONDARY}
       />
 
@@ -194,6 +221,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         message={pendingServer ? t('common.confirm_switch_dns_desc', { name: pendingServer.name }) : ''}
         confirmLabel={t('common.switch')}
         onConfirm={handleConfirmSwitch}
+        isLoading={isSwitchConfirming}
         variant={ButtonVariant.PRIMARY}
       />
 
@@ -204,6 +232,7 @@ export function DnsServerList({ onEdit, onAdd, onDelete }: DnsServerListProps) {
         message={pendingChromeServer ? t('common.confirm_switch_chrome_desc', { name: pendingChromeServer.name }) : ''}
         confirmLabel={t('common.chrome_doh')}
         onConfirm={handleConfirmChromeSwitch}
+        isLoading={isChromeSwitchConfirming}
         variant={ButtonVariant.PRIMARY}
       />
     </div>
